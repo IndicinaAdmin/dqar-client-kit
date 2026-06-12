@@ -1,0 +1,30 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
+# engagement credentials (per-instance, never committed)
+config/engagements/
+
+# generated data — too large or contains sensitive output
+data/synthea/
+data/export/
+data/preflight-report.json
+data/stage1a-report.json
+data/stage1b-*.json
+data/stage1c-*.json
+data/upload-validation-errors.json
+data/pre-upload-check.json
+data/failed-bundles.txt
+data/uscore-failed.txt
+
+# root-level artefacts from early runs
+preflight-report.json
+
+# large binaries
+synthea.jar
+tools/*.jar
+*.ndjson
+*.ndjson.gz
+pseudonym_map_*.json

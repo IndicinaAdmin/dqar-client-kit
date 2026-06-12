@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "dqar-uc1"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+client = [
+    "requests",
+    "click",
+]
+pipeline = [
+    "requests",
+    "psycopg2-binary",
+    "anthropic",
+    "python-dotenv",
+]
+report = [
+    "anthropic",
+    "jinja2",
+    "weasyprint",
+]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "ruff",
+]
