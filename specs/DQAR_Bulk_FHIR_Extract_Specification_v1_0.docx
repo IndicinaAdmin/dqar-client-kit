@@ -1,0 +1,317 @@
+| **INDICINA  **Digital Quality Audit Framework | CONFIDENTIAL  │  Client Use Only |
+| --- | --- |
+
+| **INDICINA** Digital Quality Audit Framework **Bulk FHIR Extract Specification** Client Data Request for DQAF Assessment Engagements Version 1.0  │  June 2026  │  Confidential — For Client Use Only mcampbell@indicina.com  │  indicina.com |
+| --- |
+
+# **1. Purpose and Scope**
+
+This document specifies the Bulk FHIR data extract Indicina requires from your organization to conduct a Digital Quality Audit Framework (DQAF) assessment engagement. It defines which FHIR R4 resource types to export, the population scope and time window, the anonymization protocol required to protect member PHI, and the technical delivery format.
+
+The extract supports semantic integrity assessment across up to four use case domains depending on engagement scope:
+
+| **#** | **Use Case** | **Assessment Focus** |
+| --- | --- | --- |
+| **UC1** | **Digital Measure Readiness** | HEDIS ECDS measure semantic validation — five-level framework against MY2025 specifications |
+| **UC2** | **Pre-Audit Preparation** | Vol. 5 compliance gap identification + digital readiness findings ahead of NCQA audit |
+| **UC4** | **CMS-0057-F Readiness** | Patient Access, Provider Access, and Payer-to-Payer API data quality pre-assessment |
+| **UC5** | **P2P Data Exchange Quality** | Incoming payer-to-payer data semantic validity, completeness, and provenance assessment |
+
+Indicina will confirm the specific use cases in scope at engagement kickoff. This document covers the superset — organizations may provide a subset of resources if only specific use cases are in scope.
+
+# **2. Important Notes Before You Begin**
+
+**🔒  PHI never enters Indicina****'****s infrastructure. All conformance validation (Stages 2a and 2b) executes within the client****'****s own environment using Indicina-provided tooling. Only anonymized extracts and conformance reports cross the PHI boundary. No BAA is required for the assessment phase under this architecture.**
+
+**⚠  The extract is used for gap identification and indicative rate calculation only. SQL on FHIR queries produce diagnostic findings, not certified HEDIS rates. Your organization retains all reporting obligations under your NCQA license.**
+
+| Terminology: Please use the following terms in communications with your IT team:   •  'Bulk FHIR export' or 'Bulk FHIR data extract' — NOT 'FHIR packages' (different HL7 meaning in HL7)   •  '$export operation' — the FHIR Bulk Data Access IG operation used to generate the extract   •  'ndjson' — the output format (newline-delimited JSON, one resource per line per file)   •  'US Core 6.1.0' — the required conformance target for all resources in this extract   •  'anonymized extract' — PHI-stripped output per this specification's anonymization protocol |
+| --- |
+
+## **2.1 Required Conformance Standard — US Core 6.1.0**
+
+All resources in this extract must conform to the US Core Implementation Guide STU 6.1.0, which aligns with USCDI v3. This is the version required under CMS-0057-F (45 CFR 170.215) and approved by ONC for use in the Health IT Certification Program.
+
+| **US Core Version** | **USCDI Version** | **Regulatory Context** | **Status** |
+| --- | --- | --- | --- |
+| **US Core 3.1.1** | USCDI v1 | Original CMS-9115 (2021) | **OUTDATED — UC4 gap finding** |
+| **US Core 6.1.0** | USCDI v3 / v3.1 | CMS-0057-F required (2024) | **REQUIRED for this extract** |
+| **US Core 7.0.0** | USCDI v5 | ONC SVAP voluntary adoption | **Acceptable — forward-compatible** |
+
+**⚠  Plans on US Core 3.1.1 (original CMS-9115 implementation) should declare their version and provide their current extract. The version gap will be documented as a UC4 digital readiness finding with the Jan 1, 2027 CMS-0057-F compliance deadline attached. Indicina will assess against the available version and document the conformance delta. USCDI v7 final is expected July 2026 — plans should be aware the version ladder moves annually.**
+
+## **2.2 Assessment Sandbox Pipeline — Corrected Architecture**
+
+The extract flows through a seven-stage pipeline. All stages involving PHI — including both conformance validation steps — execute within the client's own environment. PHI never enters Indicina's infrastructure. The PHI boundary is absolute and is enforced by pipeline design, not by policy controls alone.
+
+The two conformance validation stages are orthogonal — they test independent dimensions of the data:
+
+- Stage 2a validates the transport envelope (Bulk FHIR IG): is the ndjson correctly formed? Can every line be parsed? Are resource types declared correctly?
+
+- Stage 2b validates the content structure (US Core 6.1.0 profiles): do the resources inside the envelope conform to the required profiles? Are MUST SUPPORT elements present? Are terminology bindings correct?
+
+- A plan can fail Stage 2a while producing US Core-conformant resources. A plan can pass Stage 2a while every resource fails US Core profiles. These are answers to two completely different questions.
+
+| **Env** | **#** | **Stage** | **What Happens** | **Tool / Owner** |
+| --- | --- | --- | --- | --- |
+| **CLIENT ENVIRONMENT -- PHI present. All stages execute on client infrastructure. Nothing leaves the client until Stage 4 (delivery).** |
+| **C** | **1** | **Client $export** | Plan generates Bulk FHIR ndjson using $export against their FHIR server. All resources must conform to US Core 6.1.0 profiles. Export covers resource types and population scope per Section 3. Server CapabilityStatement reviewed before export to confirm supported resource types. | *Plan**'**s FHIR server (Aidbox / HealthLake / HAPI / Azure)* |
+| **C** | **2a** | **Bulk FHIR IG compliance** | Validates the transport envelope. Orthogonal to resource content. Checks: (1) valid ndjson format, one JSON object per line, UTF-8 encoded; (2) every line parseable as JSON; (3) resourceType present on every resource; (4) file naming matches declared resource types; (5) no truncated lines or malformed end-of-file. FAIL blocks Stages 2b-i and 2b-ii. Finding owner: FHIR server / infrastructure / DevOps team. DQAF tier: Tier 3 (digital readiness gap). | *Indicina-provided ndjson structural validator script (client environment)* |
+| **C** | **2b-i** | **Base FHIR R4 structural validation** | Validates base FHIR R4 (v4.0.1) structural conformance, independent of US Core profiles. Checks: (1) valid data types on all elements; (2) base R4 cardinality constraints; (3) valid resource references, no unknown resource types; (4) required base FHIR elements present. Run with HAPI Validator -version 4.0.1 without an IG -- isolates structural failures from profile conformance failures since they have different remediation owners. IMPORTANT: FHIR R5 is not the target. US Core 6.1.0 is based on R4. The US Realm Steering Committee bypassed R5 entirely -- the next US Core version will be based on R6. FHIR R4B (v4.3.0) is largely backward compatible but may produce warnings -- document as a known edge case if the client FHIR server ships R4B. Finding owner: ETL / integration team. DQAF tier: Tier 2 (measure data gap). | *HAPI FHIR Validator -version 4.0.1 (no IG, client environment)* |
+| **C** | **2b-ii** | **US Core 6.1.0 profile conformance** | Validates content conformance against US Core 6.1.0 profiles, orthogonal to transport (2a) and on top of R4 structural baseline (2b-i). Runs with -version 4.0.1 and -ig hl7.fhir.us.core#6.1.0. Checks: (1) correct US Core profile selected per resource type and category; (2) MUST SUPPORT elements present; (3) required terminology bindings (LOINC, ICD-10-CM, SNOMED CT, RxNorm, CVX per profile); (4) US Core-specific constraints such as Observation.category required and Encounter.class required. Outputs aggregate conformance report, counts by severity, no PHI. ERROR = Level 2 finding. WARNING = Level 2 advisory. Finding owner: clinical informatics + integration team. May require source system config changes, not just pipeline fixes. DQAF tier: Tier 2 (measure data gap). | *HAPI FHIR Validator -version 4.0.1 -ig hl7.fhir.us.core#6.1.0 (client environment)* |
+| **C** | **3** | **PHI redaction** | Anonymization protocol applied per Section 5. Referential integrity preserved. All resource cross-references updated to consistent pseudonyms. Pseudonym mapping table retained securely within client environment. Original raw export deleted after anonymized extract integrity verified on 50-member sample. | *Client anonymization tooling (Indicina-specified protocol)* |
+| **PHI BOUNDARY -- Nothing above this line leaves the client environment. Only anonymized extract + conformance reports (no PHI) cross this boundary. No BAA required below this line.** |
+| **INDICINA ENVIRONMENT -- No PHI. Anonymized extract only. No BAA required for assessment phase.** |
+| **I** | **4** | **Delivery to Indicina** | Client delivers four artifacts via Indicina-provided secure channel: (1) anonymized extract, ndjson files per resource type; (2) Stage 2a Bulk FHIR IG compliance report; (3) Stage 2b-i base FHIR R4 structural conformance report; (4) Stage 2b-ii US Core 6.1.0 profile conformance report. All reports are aggregate counts with no PHI. Also include Section 6.3 known gaps declaration. | *Indicina secure SFTP / encrypted cloud storage* |
+| **I** | **5** | **Load to Aidbox sandbox** | Anonymized resources loaded to Aidbox via FHIR transaction bundles. Each resource and its AuditEvent are posted as a single atomic transaction. Four validation checks run on every write, followed by AuditEvent generation with four extension metadata fields: **VALIDATION CHECKS (a-d):** (a) Base FHIR R4 structural validation on write -- Aidbox native. Finding owner: pipeline team. DQAF Tier 2. (b) US Core 6.1.0 profile validation on write -- Aidbox with US Core IG loaded. Finding owner: clinical informatics team. DQAF Tier 2. (c) Terminology validation -- Termbox $validate-code against US Core required bindings + HEDIS MY2025 VSD (369 value sets). Finding owner: terminology governance. DQAF Tier 1/2. (d) AuditEvent resource generated atomically with resource write -- four Indicina extension fields attached (see below). **AUDITEVENT -- 4 EXTENSION METADATA FIELDS (generated at ingest, not by client FHIR server):** **EXT 1  **** http://indicina.com/fhir/ext/source-type**  (valueCode) Classifies the originating source system type. Values: ehr-clinical │ administrative │ lab │ pharmacy │ p2p. Used for Study Type 2 lineage analysis and population-level source type distribution. **EXT 2  **** http://indicina.com/fhir/ext/source-system-id**  (valueString) Pseudonymized identifier of the specific source system instance (e.g., epic-prod-org-447). Links to data inventory. Consistent across all resources from the same source system. Enables Study Type 1 and 2 lineage tracing. **EXT 3  **** http://indicina.com/fhir/ext/hedis-source-declaration**  (valueCode) Maps to NCQA ECDS data source type vocabulary. Values: ecds-ehr │ ecds-administrative │ ecds-lab │ ecds-pharmacy │ ecds-p2p. This is the measure attribution join key -- links member denominator flags back to declared data source type for ECDS reporting compliance. **EXT 4  **** http://indicina.com/fhir/ext/ingest-pipeline-id**  (valueString) Indicina pipeline run identifier (e.g., dqaf-load-20251014-001). Enables batch-level error isolation -- all resources from a specific load run are identifiable by this ID. If a systematic transformation error is found, all affected resources can be scoped by pipeline ID without full re-scan. | *Aidbox + Termbox (Indicina assessment sandbox)* |
+| **I** | **6** | **DQAF assessment queries** | SQL on FHIR v2 ViewDefinitions execute against validated anonymized data in Aidbox / PostgreSQL. Five-level semantic validation + Level 6 governance assessment. Measure attribution join queries link denominator flags to AuditEvent extension metadata. Three-tier findings report generated. | *SQL on FHIR v2 + DQAF query library* |
+
+### **Finding tier and remediation owner — by pipeline stage**
+
+| **Stage** | **Finding Type** | **DQAF Tier** | **Remediation Owner** | **Timeline** |
+| --- | --- | --- | --- | --- |
+| **2a** | Bulk FHIR IG non-compliance — malformed ndjson, missing resourceType, truncated files | **Tier 3 — Digital readiness gap** | FHIR server / infrastructure / DevOps team | *Days to weeks* |
+| **2b (base FHIR)** | Invalid FHIR R4 structure — bad data types, unknown resource types, malformed references | **Tier 2 — Measure data gap** | ETL / integration team (HL7v2-to-FHIR conversion layer) | *Weeks* |
+| **2b (US Core)** | US Core 6.1.0 profile failure — missing MUST SUPPORT elements, invalid required bindings | **Tier 2 — Measure data gap** | Clinical informatics + integration team (may require source system config changes) | *Weeks to months* |
+| **5 (Termbox)** | Terminology conformance failure — code not in required value set, stale VSD binding | **Tier 1/2 — Compliance or measure data gap** | Terminology governance function (often absent — also a Tier 3 finding) | *Depends on governance maturity* |
+| **6 (SQL on FHIR)** | Semantic context failure — wrong encounter type, measurement window violation, exclusion misapplication | **Tier 2 — Measure data gap** | Clinical informatics team — measure logic implementation | *Weeks per measure* |
+
+**⚠  Why Stage 2a/2b run in the client environment: US Core 6.1.0 MUST SUPPORT elements include PHI-bearing fields (Patient.name, Patient.birthDate). Running validation after redaction cannot distinguish ****'****field absent in client data****'**** from ****'****field redacted by protocol****'**** — findings would misrepresent the client****'****s actual data quality. Running validation in the client environment resolves this without requiring Indicina to handle PHI.**
+
+# **3. Population Scope and Time Window**
+
+## **3.1 Member Population**
+
+The extract should cover a stratified sample of your eligible member population. Full-population extracts are accepted but not required for the assessment phase. Minimum recommended sample sizes:
+
+| **Plan Size** | **Min. Sample** | **Rationale** |
+| --- | --- | --- |
+| **Under 500K members** | **5,000 members** | Sufficient for Level 1–4 semantic validation; Level 5 anomaly detection at threshold |
+| **500K – 2M members** | **10,000 members** | Required for statistically meaningful Level 5 population coherence analysis |
+| **Over 2M members** | **25,000 members** | Supports sub-population breakdowns by product line and source system type |
+
+### **Required stratification — include members from each of the following groups:**
+
+- All product lines represented (Commercial, Medicare Advantage, Medicaid) — different product lines often have distinct pipeline architectures
+
+- Members with at least one qualifying condition for each of the five priority HEDIS measures (CBP, CDC, COL-E, BCS-E, FUH/FUM)
+
+- Members enrolled mid-year (enrollment start date between Feb 1 and Nov 30 of measurement year)
+
+- Members with data contributions from two or more distinct EHR source systems
+
+- Members transferred from another health plan within the last 24 months (P2P use case)
+
+- Members with at least one exclusion code applied in any measure denominator
+
+## **3.2 Time Window**
+
+Export clinical history covering a minimum 24-month lookback from the measurement year end date. 36 months preferred where technically feasible.
+
+**⚠  BCS-E (Breast Cancer Screening) requires a 24-month lookback window. Extracts covering less than 24 months will produce incomplete Level 3 measurement window findings for this measure.**
+
+## **3.3 Export Command Reference**
+
+The following $export operation covers the US Core 6.1.0 patient compartment resources. Important: Organization, Practitioner, PractitionerRole, and Location are not in the FHIR R4 patient compartment — these may require a supplemental system-level export or separate FHIR search queries depending on your server's $export implementation. AuditEvent is a system-level resource and requires a separate system export or targeted query (see note below).
+
+| # Step 0 — verify server capability before exporting **GET [base]/metadata** # Review CapabilityStatement for $export supported resource types # Step 1 — patient compartment export (US Core 6.1.0 resources) **GET [base]/Patient/$export**   ?_type=Patient,Coverage,Condition,Observation,Procedure,Encounter,           MedicationRequest,MedicationDispense,DiagnosticReport,           Immunization,ServiceRequest,ExplanationOfBenefit   &includeAssociatedData=LatestProvenanceResources   &_since=[measurement_year_start minus 24 months]   &_outputFormat=application/fhir+ndjson # Step 2 — supplemental: provider / org / location (not patient compartment) **GET [base]/$export**   ?_type=Organization,Practitioner,PractitionerRole,Location # Step 3 — AuditEvent: system-level export OR targeted query **GET [base]/AuditEvent?_format=application/fhir+ndjson**   &date=ge[measurement_year_start minus 24 months] # Note: system-level $export or AuditEvent query requires server admin privileges |
+| --- |
+
+**⚠  If your FHIR server does not support AuditEvent export or system-level $export, provide an empty AuditEvent.ndjson file and document the gap in Section 6.3. Absence of AuditEvent is scored as a Tier 3 digital readiness finding, not an export error. Similarly, if Organization / Practitioner / PractitionerRole resources are not available via $export, provide them via separate FHIR search queries or export files.**
+
+## **3.4 US Core 6.1.0 Profile Conformance Requirements Per Resource**
+
+Each resource type in the extract must conform to its corresponding US Core 6.1.0 profile. The table below specifies the canonical profile URL, the MUST SUPPORT elements that Indicina's Stage 2 conformance validation will check, and the key terminology bindings that will be validated by Termbox at Stage 4 load.
+
+| **Resource** | **US Core 6.1.0 Profile URL** | **Key MUST SUPPORT Elements** | **Terminology Bindings** |
+| --- | --- | --- | --- |
+| **Patient** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient* | identifier (type + value), name, gender, birthDate, address, communication.language, race (ext), ethnicity (ext) | *gender: AdministrativeGender; language: BCP-47; race/ethnicity: CDC* |
+| **Coverage** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-coverage* | identifier, status, type, beneficiary, period, payor, class (group + plan) | *type: CoverageTypeAndSelf-PayCodes; class.type: CoverageClassCodes* |
+| **Condition** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-problems-health-concerns* | clinicalStatus, verificationStatus, category, code, subject, onset[x], abatement[x] | *clinicalStatus: ConditionClinicalStatusCodes; code: ICD-10-CM / SNOMED CT (required binding)* |
+| **Observation (lab)** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab* | status, category (laboratory), code (LOINC), subject, effective[x], value[x] or dataAbsentReason | *code: LOINC (required); interpretation: ObservationInterpretation; value: UCUM units* |
+| **Observation (vital signs)** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-blood-pressure* | status, category (vital-signs), code (LOINC 55284-4), component (systolic + diastolic), effective[x] | *code: LOINC (required); component.code: LOINC; value.unit: mm[Hg] UCUM* |
+| **Encounter** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter* | identifier, status, class, type, subject, participant, period, reasonCode or reasonReference, location | *class: ActEncounterCode (AMB, IMP, EMER, VR); type: CPT/SNOMED; serviceType: SNOMED* |
+| **Procedure** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-procedure* | status, code, subject, performed[x] | *code: CPT / SNOMED (extensible); status: EventStatus* |
+| **MedicationRequest** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-medicationrequest* | status, intent, medication[x] (RxNorm preferred), subject, authoredOn, requester, dosageInstruction | *medication: RxNorm (extensible) or NDC; status: MedicationRequestStatus* |
+| **DiagnosticReport (lab)** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab* | status, category (LAB), code, subject, effective[x], issued, performer, result (Observation refs) | *code: LOINC (required); category: DiagnosticServiceSectionCodes* |
+| **Immunization** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization* | status, vaccineCode (CVX), patient, occurrence[x], primarySource | *vaccineCode: CVX (required); statusReason: ImmunizationStatusReason* |
+| **ExplanationOfBenefit** | *http://hl7.org/fhir/us/carin-bb/StructureDefinition/C4BB-ExplanationOfBenefit* | status, type, use, patient, billablePeriod, insurer, provider, item (productOrService, servicedDate, diagnosisSequence) | *type: C4BBClaimType; item.productOrService: CPT/HCPCS; diagnosis.diagnosisCode: ICD-10-CM* |
+| **Provenance** | *http://hl7.org/fhir/us/core/StructureDefinition/us-core-provenance* | target (resource refs), recorded, agent (type + who), agent.onBehalfOf | *agent.type: ProvenanceParticipantType (required); agent.role: SecurityRoleType* |
+
+**⚠  Observation resources appear under multiple US Core profiles depending on category: us-core-observation-lab for laboratory results, us-core-blood-pressure for blood pressure (CBP measure), us-core-bmi, us-core-smokingstatus, and others. The HAPI Validator will select the correct profile based on the Observation.category and Observation.code values present in each resource. Ensure your export preserves category codes — missing category is a common MUST SUPPORT failure.**
+
+## **3.5 Pre-Delivery Conformance Validation — HAPI FHIR Validator**
+
+Before applying PHI redaction (Section 5) and before delivering the extract to Indicina, your IT team should run the HAPI FHIR Validator against a representative sample of the ndjson output. This is the same tool Indicina uses in Stage 2 — running it before delivery allows you to identify and optionally remediate ERROR-level findings before they appear in the DQAF findings report.
+
+| HAPI FHIR Validator — download and documentation:   https://confluence.hl7.org/display/FHIR/Using+the+FHIR+Validator US Core 6.1.0 IG package (required for profile validation):   Package ID: hl7.fhir.us.core#6.1.0   Registry: https://packages.fhir.org Run: java -jar validator_cli.jar [input-file.ndjson]           -version 4.0.1           -ig hl7.fhir.us.core#6.1.0           -profile [profile-url-from-table-above]           -output [results.json] |
+| --- |
+
+| **Severity** | **HAPI Code** | **DQAF Treatment** | **Example** |
+| --- | --- | --- | --- |
+| **ERROR** | *error* | Level 2 finding — resource fails profile conformance. Documented in findings report. Does not block extract delivery if declared in Section 6.3. | *Missing required element (e.g., Observation.status absent); invalid code system for required binding* |
+| **WARNING** | *warning* | Level 2 advisory — MUST SUPPORT element absent or terminology binding extensible violation. Noted in findings report, lower severity. | *MUST SUPPORT element missing but not required; preferred binding used instead of required* |
+| **INFORMATION** | *information* | Logged only — not a DQAF finding. Informational notes about profile choices. | *Multiple applicable profiles — validator selected most specific match* |
+
+**⚠  Indicina runs the same HAPI Validator at Stage 2 against your raw extract. ERROR-level findings are documented as Level 2 conformance findings regardless of whether they were identified pre-delivery. Pre-delivery validation does not eliminate findings — it gives you the option to remediate before they appear in the report.**
+
+## **3.6 AuditEvent Extension Metadata — Generated at Stage 4**
+
+AuditEvent resources in the DQAF assessment sandbox are not exported from the client's FHIR server — they are generated by the Indicina ingestion pipeline at Stage 4 when each resource is loaded to Aidbox. Each AuditEvent is posted atomically with its associated clinical resource as a FHIR transaction bundle.
+
+The pipeline attaches four extension fields to every AuditEvent it generates. These extensions are Indicina-defined and are not part of the base FHIR R4 or US Core 6.1.0 specifications. They provide the measure-level provenance linkage that base AuditEvent cannot express.
+
+| **Extension URL** | **valueType** | **Example Value** | **Purpose / DQAF Use** |
+| --- | --- | --- | --- |
+| *http://indicina.com/fhir/ext/source-type* | **valueCode** | *ehr-clinical* | Classifies the originating source system type. Used for Study Type 2 (EHR feed completeness) and population-level source type distribution analysis. |
+| *http://indicina.com/fhir/ext/source-system-id* | **valueString** | *epic-prod-org-447* | Pseudonymized identifier of the specific source system instance. Links back to the data inventory (Study Type 1/2). Consistent across all resources from the same source. |
+| *http://indicina.com/fhir/ext/hedis-source-declaration* | **valueCode** | *ecds-ehr* | Maps to NCQA ECDS source type vocabulary. Used for measure attribution join — links member denominator flags back to declared data source. Values: ecds-ehr │ ecds-administrative │ ecds-lab │ ecds-pharmacy │ ecds-p2p |
+| *http://indicina.com/fhir/ext/ingest-pipeline-id* | **valueString** | *dqaf-load-20251014-001* | Identifies the specific Indicina ingestion pipeline run. Enables batch-level analysis — if a systematic error was introduced in a specific load run, all affected resources can be identified by this ID. |
+
+| // AuditEvent with Indicina extension metadata — generated at Stage 4 load {   "resourceType": "AuditEvent",   "type": { "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",              "code": "rest", "display": "RESTful Operation" },   "recorded": "2025-10-14T09:22:00Z",   "agent": [{ "requestor": true,               "who": { "display": "dqaf-ingest-pipeline" } }],   "source": { "observer": { "display": "Indicina DQAF Sandbox" } },   "entity": [{ "what": { "reference": "Condition/pat-abc123-cond-001" },                "type": { "code": "2", "display": "System Object" } }],   "extension": [     { "url": "http://indicina.com/fhir/ext/source-type",       "valueCode": "ehr-clinical" },     { "url": "http://indicina.com/fhir/ext/source-system-id",       "valueString": "epic-prod-org-447" },     { "url": "http://indicina.com/fhir/ext/hedis-source-declaration",       "valueCode": "ecds-ehr" },     { "url": "http://indicina.com/fhir/ext/ingest-pipeline-id",       "valueString": "dqaf-load-20251014-001" }   ] } |
+| --- |
+
+| -- Measure attribution join: SQL on FHIR against Aidbox PostgreSQL -- Links member denominator flag → resource → AuditEvent → source declaration SELECT   c.id                                           AS condition_id,   ae.resource->>'recorded'                       AS ingest_timestamp,   ext_src.value->>'valueCode'                    AS source_type,   ext_sys.value->>'valueString'                  AS source_system_id,   ext_hdx.value->>'valueCode'                    AS hedis_source_declaration,   ext_pip.value->>'valueString'                  AS ingest_pipeline_id FROM condition c JOIN auditEvent ae   ON ae.resource #>> '{entity,0,what,reference}'      = 'Condition/' ││ c.id CROSS JOIN LATERAL jsonb_array_elements(   ae.resource->'extension') AS ext_src(value)   WHERE ext_src.value->>'url' =     'http://indicina.com/fhir/ext/source-type' -- (repeat CROSS JOIN LATERAL for ext_sys, ext_hdx, ext_pip) WHERE c.resource->'code'->'coding'->0->>'code'   IN (SELECT code FROM hedis_vsd WHERE value_set_oid = '2.16.840.1.113883.3.464.1003.104.12.1003'); |
+| --- |
+
+**⚠  The hedis-source-declaration extension uses the NCQA ECDS source type vocabulary: ecds-ehr (EHR clinical data), ecds-administrative (claims/administrative data), ecds-lab (laboratory feed), ecds-pharmacy (PBM/pharmacy data), ecds-p2p (payer-to-payer received data). These values align with the data source attribution declarations required in ECDS reporting and with NCQA****'****s MY2026 provenance evaluation methodology under development.**
+
+# **4. Resource Type Specification**
+
+## **4.1 Mandatory Core — All Use Cases**
+
+These resource types are required for every DQAF engagement regardless of use case scope. They establish patient identity, enrollment, coverage, and provider attribution — the foundational spine all other resources join to.
+
+| **Resource Type** | **FHIR R4 Resource** | **Use Cases** | **Status** | **PHI Handling** | **Key Fields / Notes** |
+| --- | --- | --- | --- | --- | --- |
+| **Patient** | *Patient* | All | **REQUIRED** | Pseudonymize: id, identifier, name, address, telecom, birthDate (keep year only) | *Keep: gender, language, deceased flag, race/ethnicity extensions* |
+| **Coverage** | *Coverage* | All | **REQUIRED** | Pseudonymize: memberId, subscriberId | *Keep: period, payor ref, class (product line), relationship* |
+| **Organization** | *Organization* | All | **REQUIRED** | Pseudonymize: name → org-{hash} | *Keep: type, address (city/state/zip only), identifier (NPI)* |
+| **Practitioner** | *Practitioner* | All | **REQUIRED** | Pseudonymize: name → prac-{hash} | *Keep: identifier (NPI), qualification, gender* |
+| **PractitionerRole** | *PractitionerRole* | All | **REQUIRED** | No direct PHI | *Keep: practitioner ref, organization ref, specialty, location ref* |
+| **Location** | *Location* | All | **REQUIRED** | Pseudonymize: name, address (keep city/state/zip) | *Keep: type, physicalType, managingOrganization* |
+
+## **4.2 Clinical Layer — HEDIS dQM / ECDS (UC1, UC2)**
+
+Required for Level 1–5 semantic validation against HEDIS MY2025 measure specifications.
+
+| **Resource Type** | **FHIR R4 Resource** | **Use Cases** | **Status** | **PHI Handling** | **Key Fields / Notes** |
+| --- | --- | --- | --- | --- | --- |
+| **Condition** | *Condition* | UC1, UC2, UC5 | **REQUIRED** | No direct PHI in coded fields | *Keep: code (ICD-10/SNOMED), clinicalStatus, verificationStatus, onset, subject, encounter ref* |
+| **Observation** | *Observation* | UC1, UC2, UC5 | **REQUIRED** | No direct PHI in coded/numeric fields | *Keep: code (LOINC), value, status, effective, performer, encounter ref, component* |
+| **Encounter** | *Encounter* | UC1, UC2, UC4, UC5 | **REQUIRED** | No direct PHI | *Keep: class, type, serviceType, period, status, participant, reasonCode, location* |
+| **Procedure** | *Procedure* | UC1, UC2, UC5 | **REQUIRED** | No direct PHI in coded fields | *Keep: code (CPT/SNOMED), status, performed, performer, encounter ref* |
+| **MedicationRequest** | *MedicationRequest* | UC1, UC2, UC5 | **REQUIRED** | No direct PHI in coded fields | *Keep: medication (RxNorm/NDC), status, intent, authoredOn, requester, dosage* |
+| **MedicationDispense** | *MedicationDispense* | UC1, UC2, UC5 | **RECOMMENDED** | No direct PHI in coded fields | *Keep: medication (RxNorm/NDC), status, quantity, daysSupply, whenHandedOver* |
+| **DiagnosticReport** | *DiagnosticReport* | UC1, UC2, UC5 | **RECOMMENDED** | Pseudonymize: presentedForm content | *Keep: code, status, effective, issued, performer, result refs, encounter ref* |
+| **Immunization** | *Immunization* | UC1, UC2 | **RECOMMENDED** | No direct PHI in coded fields | *Keep: vaccineCode (CVX), status, occurrence, performer, lotNumber optional* |
+| **ServiceRequest** | *ServiceRequest* | UC1, UC2 | **OPTIONAL** | No direct PHI in coded fields | *Keep: code, status, intent, occurrence, requester, performer* |
+
+## **4.3 Claims Layer — CMS-0057-F Patient Access API (UC4)**
+
+Required for CMS-0057-F Patient Access API data quality assessment. ExplanationOfBenefit is the most complex and highest-risk resource in this extract — it aggregates data from multiple source systems and carries the highest transformation artifact risk.
+
+| **Resource Type** | **FHIR R4 Resource** | **Use Cases** | **Status** | **PHI Handling** | **Key Fields / Notes** |
+| --- | --- | --- | --- | --- | --- |
+| **ExplanationOfBenefit** | *ExplanationOfBenefit* | UC4, UC5 | **REQUIRED** | Pseudonymize: patient ref, provider name. Keep NPI. | *CARIN Blue Button IG profile required. Keep: type, status, use, billablePeriod, item (serviceCode, diagCode, quantity, unitPrice removed), adjudication* |
+| **Claim** | *Claim* | UC4 | **OPTIONAL** | Pseudonymize: patient ref, provider name | *Keep: type, status, billablePeriod, diagnosis, procedure, item (serviceCode only)* |
+| **ClaimResponse** | *ClaimResponse* | UC4 | **OPTIONAL** | No direct PHI | *Keep: status, outcome, item (adjudication), error codes* |
+
+## **4.4 Provenance and Audit Layer — All Use Cases**
+
+Critical for lineage study execution and AuditEvent gap detection. Plans that cannot export these resources have a confirmed Level 3 digital readiness gap — absence is itself a finding.
+
+| **Resource Type** | **FHIR R4 Resource** | **Use Cases** | **Status** | **PHI Handling** | **Key Fields / Notes** |
+| --- | --- | --- | --- | --- | --- |
+| **Provenance** | *Provenance* | All | **REQUIRED** | No direct PHI | *Keep: target refs, recorded, agent (who, onBehalfOf), activity, entity (role, what ref)* |
+| **AuditEvent** | *AuditEvent* | All | **REQUIRED** | Pseudonymize: agent.name | *Keep: type, recorded, agent (type, requestor), source, entity (what ref, type). Export Indicina extension fields if present.* |
+
+**⚠  If your FHIR server does not generate AuditEvent resources or does not retain a Provenance resource for each clinical resource, export empty files for these types and note the gap in the delivery checklist. Absence is a scoreable finding, not an export error.**
+
+# **5. Anonymization Protocol**
+
+All exports must be processed through the following anonymization protocol before delivery to Indicina. The protocol is designed to preserve the coded, temporal, and structural data required for semantic testing while removing all directly and indirectly identifying information.
+
+**🔒  Do not deliver identifiable PHI. Indicina****'****s assessment sandbox is not a covered-entity environment. Delivery of non-anonymized data constitutes a HIPAA breach. If your organization requires a BAA for the delivery mechanism itself (e.g., encrypted file transfer), contact Indicina prior to export.**
+
+## **5.1 Treatment by Sensitivity Level**
+
+| **Field / Element** | **Sensitivity** | **Treatment** | **Rationale** |
+| --- | --- | --- | --- |
+| **Patient.id** | **HIGH** | Replace with pseudonym: pat-{SHA256-hash(original-id)[:12]} | *Consistent pseudonym required — all resource references to this patient must use the same pseudonym* |
+| **Patient.name** | **HIGH** | Remove entirely | *Not required for any semantic test* |
+| **Patient.identifier (MBI, SSN)** | **HIGH** | Remove entirely | *Member ID may be replaced with pseudonym if needed for reconciliation* |
+| **Patient.birthDate** | **HIGH** | Keep year only: YYYY-01-01 | *Age and continuous enrollment logic require year precision; month/day not required* |
+| **Patient.address** | **HIGH** | Keep state and zip code only | *Geographic context for population-level analysis; street address not required* |
+| **Patient.telecom** | **HIGH** | Remove entirely | *Not required for any semantic test* |
+| **Practitioner.name** | **MEDIUM** | Replace with pseudonym: prac-{NPI-hash[:8]} | *NPI must be retained for provider attribution and data completeness analysis* |
+| **Practitioner.identifier (NPI)** | **LOW** | Retain as-is | *NPI is a public identifier required for provider attribution scoring* |
+| **Organization.name** | **MEDIUM** | Replace with pseudonym: org-{NPI-hash[:8]} | *Org type and NPI retained for network analysis* |
+| **Encounter.period** | **LOW** | Retain as-is | *Date precision required for measurement window and enrollment continuity testing* |
+| **Observation.effective** | **LOW** | Retain as-is | *Date precision required for measurement window testing (e.g., HbA1c result date)* |
+| **Observation.value (numeric)** | **LOW** | Retain as-is | *Numeric values required for Level 4 plausibility checks (physiological range)* |
+| **DiagnosticReport.presentedForm** | **HIGH** | Remove entirely (base64 content) | *Unstructured clinical documents not required; coded fields in referenced Observations are sufficient* |
+| **AuditEvent.agent.name** | **MEDIUM** | Replace with pseudonym: agent-{hash[:8]} | *Agent type and requestor flag retained for provenance gap analysis* |
+| **ExplanationOfBenefit.item.unitPrice** | **MEDIUM** | Remove or zero out | *Payment amounts not required for semantic or conformance testing* |
+| **ExplanationOfBenefit.item.adjudication.amount** | **MEDIUM** | Remove or zero out | *Payment amounts not required* |
+
+## **5.2 Referential Integrity Requirement**
+
+Referential integrity must be preserved across all resource references after anonymization. If Patient.id is pseudonymized to 'pat-abc123', then every Condition.subject, Observation.subject, Encounter.subject, Coverage.beneficiary, and AuditEvent.entity reference pointing to that patient must use 'pat-abc123'.
+
+**⚠  Broken referential integrity is the most common anonymization failure mode and renders the extract partially or fully unusable for Level 3 context conformance testing. Indicina recommends testing a 50-member sample for referential integrity before delivering the full extract.**
+
+# **6. Delivery Format and Checklist**
+
+## **6.1 File Format**
+
+- Format: ndjson (newline-delimited JSON), one FHIR resource per line
+
+- File naming: one file per resource type — Patient.ndjson, Coverage.ndjson, Condition.ndjson, etc.
+
+- Encoding: UTF-8
+
+- Compression: gzip compression accepted (.ndjson.gz)
+
+- Delivery: encrypted file transfer via SFTP or secure cloud storage link provided by Indicina at engagement kickoff
+
+## **6.2 Delivery Checklist**
+
+Please confirm each item before delivery:
+
+|  | **Checklist Item** | **Status** |
+| --- | --- | --- |
+| **1** | US Core version declared — state which version your FHIR server implements (3.1.1 / 6.1.0 / 7.0.0) in Section 6.3 | ☐  Confirmed |
+| **2** | CapabilityStatement reviewed — confirm which resource types your server supports in $export before generating extract | ☐  Confirmed |
+| **3** | Conformance pre-validation completed — HAPI FHIR Validator run against raw extract before redaction (or note inability in Section 6.3) | ☐  Confirmed |
+| **4** | Anonymization protocol applied per Section 5 | ☐  Confirmed |
+| **5** | Referential integrity verified on a 50-member test sample — all cross-references use consistent pseudonyms | ☐  Confirmed |
+| **6** | All mandatory core resources present (Patient, Coverage, Organization, Practitioner, PractitionerRole, Location) | ☐  Confirmed |
+| **7** | Clinical resources present for at least 3 of the 5 priority measures (CBP, CDC, COL-E, BCS-E, FUH/FUM) | ☐  Confirmed |
+| **8** | Time window covers minimum 24 months of clinical history | ☐  Confirmed |
+| **9** | Population stratification includes all product lines | ☐  Confirmed |
+| **10** | Provenance resources included via includeAssociatedData parameter or noted as absent in Section 6.3 | ☐  Confirmed |
+| **11** | AuditEvent file included (even if empty — note gap in Section 6.3; absence is a scored finding) | ☐  Confirmed |
+| **12** | ExplanationOfBenefit in CARIN Blue Button IG STU 2.0.0 / 2.1.0 format (UC4/UC5 only) | ☐  Confirmed |
+| **13** | File naming follows resource-type.ndjson convention | ☐  Confirmed |
+| **14** | Delivery via Indicina-provided secure channel | ☐  Confirmed |
+
+## **6.3 Known Gaps — Please Document**
+
+If your organization cannot produce certain resource types or must deviate from the anonymization protocol, document those gaps here before delivery. Known gaps are scored differently from undocumented gaps in the DQAF findings report — documentation demonstrates governance awareness.
+
+| **Resource / Element** | **Gap Description** | **Reason / Context** |
+| --- | --- | --- |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+
+# **7. Questions and Support**
+
+| For questions about this specification, contact:   Michael E. Campbell   Healthcare Informatics Strategist and Consultant   Indicina   mcampbell@indicina.com For technical questions about the $export operation or FHIR Bulk Data Access IG:   https://hl7.org/fhir/uv/bulkdata/ For questions about CARIN Blue Button IG (ExplanationOfBenefit profile):   https://hl7.org/fhir/us/carin-bb/ |
+| --- |
+
+*Indicina will acknowledge receipt of the extract within one business day and confirm readiness to begin the assessment phase. Questions about individual resource type availability or anonymization approach are welcome prior to export — it is preferable to resolve ambiguities before generating a large extract than to discover issues after delivery.*
+
+| Bulk FHIR Extract Specification  │  © 2026 Indicina | Page |
+| --- | --- |
