@@ -16,127 +16,195 @@ This document specifies the technical architecture for the UC1 Digital Measure R
 
 ## Architecture Summary
 
-The app is a seven-stage data ingestion and validation pipeline. All stages involving PHI execute in the client's environment. Only anonymized data and conformance reports cross to Indicina's infrastructure.
+The pipeline has six stages. Stage 1 (with substages 1a–1c) executes entirely in the client environment against PHI-containing data. Stage 2 (PHI redaction) is optional and client-initiated. Stages 3–6 execute in the Indicina or plan-owned Aidbox environment.
 
 ```
 CLIENT ENVIRONMENT (PHI present)
-  Preflight:   CapabilityStatement check — server capability + resource inventory
-               output: preflight-report.json
-  Stage 1:     Client $export — US Core 6.1.0 ndjson
-  Stage 1a:    Bulk FHIR API protocol conformance ($export async protocol + manifest)
-               output: stage1a-{engagement}.json (no PHI)
-  Stage 1b:    NDJSON structural validation
-               output: stage1b-report.json (no PHI)
-  Stage 1c:    Resource conformance ($validate — base FHIR R4 + US Core 6.1.0)
-               output: stage1c-{engagement}.json (no PHI)
-  Stage 3:     PHI redaction + anonymization
 
-PHI BOUNDARY — nothing above crosses to Indicina
+  Stage 1:   Bulk FHIR Export and Conformance Testing
+             The client's IT team runs the conformance testing kit against their
+             FHIR vendor extract. Three substages run in sequence.
+             All PHI stays within the client environment.
+             Outputs: three JSON reports + three PDF renders.
 
-INDICINA ENVIRONMENT (no PHI)
-  Stage 4:  Delivery — anonymized extract + 3 conformance reports
-  Stage 5:  Load to Aidbox sandbox
-            (a) Base FHIR R4 validation on write
-            (b) US Core 6.1.0 profile validation on write
-            (c) Termbox $validate-code — US Core bindings + HEDIS MY2025 VSD
-            (d) AuditEvent + 6 extensions generated atomically
-  Stage 6:  DQAR SQL on FHIR assessment queries
-  Stage 7:  Three-tier findings report generation
+    Stage 1a: Bulk FHIR API conformance    [stage1a_bulk_fhir_export_preflight.py]
+              CapabilityStatement query · $export kick-off · manifest
+              conformance check · output content-type check against Bulk Data
+              Access IG STU2. Runs against the live FHIR vendor server.
+              Skipped if $export not declared in CapabilityStatement.
+              Output: stage1a-{engagement}.json
+
+    Stage 1b: ndjson structural conformance testing  [stage1b_ndjson_validator.py]
+              Parseable JSON · resourceType present · one resource per
+              line · UTF-8 encoding · resourceType matches filename stem
+              (Patient.ndjson must contain only Patient resources).
+              Runs against the exported ndjson files.
+              Output: stage1b-{engagement}.json + PDF render
+
+    Stage 1c: FHIR R4 + US Core conformance [stage1c_fhir_uscore_validator.py]
+              1c-i  — Base FHIR R4 (4.0.1) structural conformance testing (no IG)
+              1c-ii — US Core 6.1.0 profile conformance testing
+              --backend hapi-cli (default): HAPI Validator CLI, no server needed (Rung 1/2)
+              --backend aidbox: Aidbox $validate REST API, engagement config required (Rung 3+)
+              Output: stage1c-i-{engagement}.json + stage1c-ii-{engagement}.json
+
+  → Client receives three JSON reports + three PDF renders.
+  → Client decision point — three paths forward:
+
+  PATH A — Stop here (no data leaves the plan)
+            Act on findings using internal staff or Indicina advisory.
+            No sandbox, no PHI redaction, no vendor contracts needed.
+            Full value from Stage 1 findings at Rung 1.
+
+  PATH B — Proceed to sandbox (anonymized extract only)
+            Client runs Stage 2 PHI redaction locally, sends
+            anonymized extract to Indicina Aidbox sandbox.
+            Deeper validation: Termbox VSD conformance, AuditEvent
+            metadata, SQL on FHIR queries, full three-tier findings
+            report. No PHI crosses the boundary.
+            Appropriate while HS HIPAA/SOC2 due diligence is in progress.
+
+  PATH C — Full platform operational mode (PHI in Aidbox)
+            After plan completes Health Samurai HIPAA BAA and SOC2
+            review and contracts Aidbox, the Bulk FHIR extract loads
+            directly to the plan's own Aidbox instance with full PHI.
+            No anonymization step. Stage 1 becomes the pre-ingest
+            quality gate for real operations.
+            AuditEvent metadata captures lineage from day one.
+            This is the target state — the platform ladder destination.
+
+  Stage 2:  PHI redaction + anonymization   [PATH B ONLY — client-initiated]
+            Client runs local redaction against the Bulk FHIR extract.
+            Produces anonymized ndjson — no member-identifiable fields.
+            Not required for Path A or Path C.
+            Output: anonymized extract ready for Indicina delivery.
+
+PHI BOUNDARY — PATH B ONLY
+  Anonymized extract + Stage 1 reports cross to Indicina.
+  Path C bypasses this boundary entirely — PHI loads directly
+  to the plan's own contracted Aidbox instance.
+
+INDICINA ENVIRONMENT — PATH B (anonymized sandbox)
+
+  Stage 3:  Load to Aidbox sandbox
+            (a) Re-run Stage 1b + 1c conformance testing on anonymized extract
+                → confirms redaction did not corrupt structural integrity
+                → creates permanent conformance baseline for this extract
+            (b) Termbox $validate-code — US Core required bindings
+                + HEDIS MP2025 VSD (369 value sets)
+            (c) AuditEvent + seven extensions generated atomically per resource
+
+  Stage 4:  DQAR SQL on FHIR assessment queries
+            Five-measure SQL on FHIR ViewDefinition library.
+            Risk stratification matrix from AuditEvent metadata.
+            Measure attribution join queries.
+
+  Stage 5:  Three-tier findings report generation
+            Tier 1 — Governance gaps
+            Tier 2 — Measure data gaps
+            Tier 3 — Digital readiness gaps
+            Each finding: technical severity + governance root cause
+            + DAMA-DMBOK maturity score + remediation recommendation.
+
+PLAN'S OWN AIDBOX INSTANCE — PATH C (full PHI operational mode)
+
+  Stage 3:  Load to plan-contracted Aidbox instance (with PHI)
+            Same pattern as Path B sandbox — Stage 1b + 1c re-run
+            at ingest, Termbox VSD, AuditEvent seven extensions.
+            This is real operations, not assessment.
+            AuditEvent metadata is permanent production lineage.
+
+  Stage 4+: Ongoing UC2 monitoring cadence applies.
+            Indicina runs assessment queries against plan's Aidbox
+            on scheduled cadence under $4K/month retainer.
 ```
 
 ---
 
-## Client-Side Validation Kit (Stages 1a, 1b, 1c)
+## Client-Side Conformance Testing Kit (Stage 1 — Substages 1a, 1b, 1c)
 
 ### Deliverable to client at engagement kickoff
 
-Indicina provides a validation kit the client's IT team runs on their own infrastructure against raw PHI-containing ndjson before redaction. Findings from this kit are delivered to Indicina as aggregate reports with no PHI.
+Indicina provides a conformance testing kit the client's IT team runs on their own infrastructure against raw PHI-containing ndjson. No PHI leaves the client environment. The kit produces three JSON reports and three PDF renders. The client decides independently whether to proceed to the optional PHI redaction (Stage 2) and Indicina sandbox (Stage 3) stages.
 
-The kit is configured via engagement config files (see **Engagement Configuration** section below). Each engagement config declares the FHIR server type, base URL, and credentials. The `--engagement` flag is the single required input for all kit scripts.
+The kit supports two validator backends for Stages 1b and 1c:
+- **HAPI Validator CLI** — default, no vendor contract required, runs anywhere Java is available (Rung 1 and Rung 2)
+- **Aidbox** — available at Rung 3+ when the plan has Aidbox in production; provides native conformance testing at write time with richer error metadata
 
-### Preflight — CapabilityStatement check
+### Stage 1a — Bulk FHIR API conformance  `stage1a_bulk_fhir_export_preflight.py`
 
-```bash
-python packages/client-kit/preflight/preflight_check.py \
-  --engagement config/engagements/{client}.json \
-  --output preflight-report.json
-```
+Tests the plan's FHIR server `$export` implementation live against the SMART Bulk Data Access IG STU2 before any data is exported. Six checks: CapabilityStatement declares `$export`, kick-off returns 202 Accepted, Content-Location header present, polling completes with 200, manifest contains `output[]` and `requiresAccessToken`, output files return `application/fhir+ndjson` content-type.
 
-Checks that the target FHIR server declares all required US Core resource types and reports whether Bulk FHIR `$export` is supported. Output is read by Stage 1a to determine whether bulk export protocol testing applies.
+Skipped automatically if preflight reports `bulk_export_supported: false`.
 
-### Stage 1a — Bulk FHIR API protocol conformance
+Output: `stage1a-{engagement}.json`
 
-```bash
-python packages/client-kit/validator/stage1a_bulk_fhir_export_preflight.py \
-  --engagement config/engagements/{client}.json \
-  --preflight-report preflight-report.json \
-  --output data/stage1a-{engagement}.json
-```
+### Stage 1b — ndjson structural conformance testing  `stage1b_ndjson_validator.py`
 
-Tests the server's `$export` implementation against the SMART Bulk Data Access IG. Six checks: `capability_declares_export`, `kick_off_accepted` (202 response), `content_location_header`, `polling_completes`, `manifest_valid` (output array + requiresAccessToken), `output_content_type` (application/fhir+ndjson). Skipped automatically when preflight reports `bulk_export_supported: false`.
+Validates every line of every ndjson file in the Bulk FHIR export: parseable JSON, `resourceType` present, one resource per line. Runs against raw PHI-containing export output. No PHI in the output report — aggregate counts and error descriptions only.
 
-### Stage 1b — NDJSON structural validation
+Output: `stage1b-{engagement}.json` + PDF render
+
+### Stage 1c — FHIR R4 + US Core conformance  `stage1c_fhir_uscore_validator.py`
+
+Two sub-passes:
 
 ```bash
-python packages/client-kit/validator/stage1b_ndjson_validator.py \
+# Rung 1/2 — HAPI Validator CLI (default, no FHIR server required)
+python stage1c_fhir_uscore_validator.py \
   --ndjson-dir data/export \
-  --output data/stage1b-report.json
-```
+  --engagement client-name \
+  --backend hapi-cli \
+  --validator-jar tools/validator_cli.jar
 
-Five structural checks per `.ndjson` file: UTF-8 decodable, no empty files, all lines valid JSON, `resourceType` present on every record, filename stem matches declared resource type. Outputs aggregate counts only — no PHI in report.
-
-### Stage 1c — Resource conformance ($validate)
-
-```bash
-python packages/client-kit/validator/stage1c_fhir_uscore_validator.py \
-  --engagement config/engagements/{client}.json \
+# Rung 3+ — Aidbox $validate REST API (engagement config required)
+python stage1c_fhir_uscore_validator.py \
   --ndjson-dir data/export \
-  --output data/stage1c-{engagement}.json
+  --engagement config/engagements/client.json \
+  --backend aidbox
 ```
 
-Posts each resource to the FHIR server's `/{ResourceType}/$validate` endpoint. Classifies returned OperationOutcome issues as `base-fhir` (core R4 constraint) or `us-core` (US Core 6.1.0 profile violation) by inspecting the `http://hl7.org/fhir/us/core` URL prefix in diagnostics and expression fields. Both base FHIR R4 and US Core conformance are assessed in a single pass — the engagement's server performs both validations and the response is classified accordingly.
+Both produce identical output files:
+- `stage1c-i-{engagement}.json` — base FHIR R4 results
+- `stage1c-ii-{engagement}.json` — US Core 6.1.0 results
 
-Run against multiple engagements to compare server behaviour on the same dataset.
+For `--backend hapi-cli`, sub-passes run sequentially via the HAPI Validator CLI JAR (set `FHIR_VALIDATOR_JAR` env var or pass `--validator-jar`). For `--backend aidbox`, each resource is POSTed to `{base_url}/fhir/{ResourceType}/$validate` and OperationOutcome issues are classified into 1c-i (base FHIR R4) or 1c-ii (US Core) based on whether a US Core profile URL appears in the issue diagnostics. The `--engagement` argument must be a path to an engagement config JSON when using `--backend aidbox`.
 
 ### Conformance report format (delivered to Indicina — no PHI)
 
-Stage 1c report (one per engagement):
-
 ```json
 {
-  "report_type": "fhir-validation",
-  "stage": "1c",
-  "generated_at": "2025-10-14T09:00:00Z",
-  "engagement": "client-aidbox-prod",
-  "server_type": "aidbox",
-  "fhir_server": "https://client.edge.aidbox.app",
-  "ndjson_dir": "/data/export",
+  "report_type": "fhir-conformance",
+  "stage": "1c-ii",
+  "validator": "hapi-cli",
+  "validator_version": "6.3.x",
+  "ig_version": "hl7.fhir.us.core#6.1.0",
+  "us_core_version": "6.1.0",
+  "fhir_version": "4.0.1",
+  "engagement": "client-name",
+  "run_timestamp": "2025-10-14T09:00:00Z",
   "summary": {
     "total_resources": 48230,
-    "base_fhir_issues": 234,
-    "us_core_issues": 613,
-    "total_issues": 847
+    "error_count": 847,
+    "warning_count": 2341,
+    "information_count": 5102
   },
-  "files": [
+  "by_resource_type": [
     {
       "resource_type": "Condition",
-      "file": "Condition.ndjson",
-      "record_count": 12440,
-      "issue_counts": {"base_fhir": 45, "us_core": 189},
-      "issues": [
-        {
-          "resource_id": "cond-abc123",
-          "severity": "error",
-          "layer": "us-core",
-          "code": "MUST_SUPPORT",
-          "diagnostics": "Condition.clinicalStatus is required by US Core",
-          "expression": ["Condition.clinicalStatus"]
-        }
+      "total": 12440,
+      "errors": 234,
+      "warnings": 891,
+      "top_errors": [
+        {"code": "MUST_SUPPORT", "element": "Condition.clinicalStatus", "count": 189},
+        {"code": "BINDING", "element": "Condition.code", "count": 45}
       ]
     }
   ]
 }
 ```
+
+Field notes: `"validator"` is `"hapi-cli"` or `"aidbox"` depending on `--backend`. `"validator_version"` is present only for `hapi-cli` (extracted from HAPI CLI stderr). `"ig_version"` and `"us_core_version"` are present only in the 1c-ii report. Both backends produce structurally identical reports.
 
 ---
 
@@ -155,7 +223,7 @@ The feed manifest is the ground truth for feed-level traceability. Collected bef
       "feed_id": "epic-prod-org447",
       "feed_type": "ehr-fhir-bulk",
       "source_system_name": "Epic EHR",
-      "source_system_type": "ehr-clinical",
+      "source_system_type": "clinical_ehr",
       "files": ["Patient.ndjson", "Condition.ndjson", "Observation.ndjson",
                 "Encounter.ndjson", "Procedure.ndjson"],
       "member_count": 4823,
@@ -165,7 +233,7 @@ The feed manifest is the ground truth for feed-level traceability. Collected bef
       "feed_id": "claims-edw-prod",
       "feed_type": "administrative-claims",
       "source_system_name": "Claims EDW",
-      "source_system_type": "administrative",
+      "source_system_type": "administrative_claims",
       "files": ["ExplanationOfBenefit.ndjson", "Coverage.ndjson"],
       "member_count": 9847
     },
@@ -173,7 +241,7 @@ The feed manifest is the ground truth for feed-level traceability. Collected bef
       "feed_id": "labcorp-hl7v2",
       "feed_type": "lab-fhir-transformed",
       "source_system_name": "LabCorp",
-      "source_system_type": "lab",
+      "source_system_type": "clinical_lab",
       "files": ["Observation-lab.ndjson", "DiagnosticReport.ndjson"],
       "member_count": 3201,
       "notes": "HL7v2 ORU transformed to FHIR via Interbox"
@@ -194,7 +262,7 @@ The feed manifest is the ground truth for feed-level traceability. Collected bef
 | Product | Role |
 |---|---|
 | Aidbox | FHIR R4 server + PostgreSQL store for anonymized extract |
-| Termbox | Terminology server — MY2025 VSD + US Core 6.1.0 bindings |
+| Termbox | Terminology server — MP2025 VSD + US Core 6.1.0 bindings |
 
 ### Aidbox configuration requirements
 
@@ -231,58 +299,9 @@ Three modes for VSD access (client determines which applies):
 
 ---
 
-## Engagement Configuration
+## AuditEvent Extension Metadata (Seven Fields)
 
-All client-side kit scripts accept a single `--engagement` flag pointing to a JSON config file. This decouples server connection details from the pipeline code and supports running the same validation against multiple server instances (e.g., client's Aidbox sandbox vs. public HAPI for comparison).
-
-### Config file location
-
-```
-config/
-  engagement.schema.json          # committed — documents the schema
-  engagements/
-    {client-name}.json            # gitignored — contains credentials
-```
-
-### Schema (`config/engagement.schema.json`)
-
-```json
-{
-  "name": "client-aidbox-prod",
-  "server_type": "aidbox",
-  "base_url": "https://{instance}.edge.aidbox.app",
-  "client_id": "<oauth2-client-id>",
-  "client_secret": "<oauth2-client-secret>"
-}
-```
-
-```json
-{
-  "name": "client-hapi-r4",
-  "server_type": "hapi",
-  "base_url": "https://hapi.fhir.org/baseR4"
-}
-```
-
-Supported `server_type` values:
-
-| Value | Auth method | Notes |
-|---|---|---|
-| `aidbox` | OAuth2 `client_credentials` — fetches Bearer token from `/auth/token` | `client_id` and `client_secret` required |
-| `hapi` | HTTP Basic (optional) or no auth | `basic_user` / `basic_password` optional |
-
-### Implementation (`shared/engagement.py`)
-
-`load_engagement(config_path)` → `EngagementConfig` dataclass  
-`get_fhir_headers(engagement)` → auth headers dict for FHIR requests
-
-All kit scripts use this shared module. Engagement configs are gitignored — credentials never enter source control.
-
----
-
-## AuditEvent Extension Metadata (Six Fields)
-
-Generated by the Indicina ingest pipeline at Stage 5 write time. Not sourced from the client's FHIR server.
+Generated by the Indicina ingest pipeline at Stage 3 load time. Not sourced from the client's FHIR server.
 
 ### Extension definitions
 
@@ -291,10 +310,14 @@ Generated by the Indicina ingest pipeline at Stage 5 write time. Not sourced fro
   {
     "url": "http://indicina.com/fhir/ext/source-type",
     "valueType": "valueCode",
-    "vocabulary": ["ehr-clinical", "administrative", "lab", "pharmacy", "p2p", "unknown"],
+    "vocabulary": {
+      "tier_a": ["clinical_ehr", "administrative_claims", "administrative_encounter", "pharmacy_pbm", "clinical_lab", "payer_exchange"],
+      "tier_b": ["clinical_phr", "pharmacy_specialty", "clinical_hie", "clinical_registry", "case_management", "disease_management"],
+      "unresolvable": ["unknown"]
+    },
     "source": "feed-manifest | meta.source | resource-inference",
     "confidence": "asserted | high | medium | low | unknown",
-    "purpose": "Classifies originating source system type. Study Type 2 lineage analysis."
+    "purpose": "Expanded 12-value vocabulary. Tier A structurally detectable; Tier B requires feed manifest or meta.source. Classifies originating source system type. Study Type 2 lineage analysis."
   },
   {
     "url": "http://indicina.com/fhir/ext/source-system-id",
@@ -328,11 +351,18 @@ Generated by the Indicina ingest pipeline at Stage 5 write time. Not sourced fro
     "valueType": "valueCode",
     "vocabulary": ["asserted", "high", "medium", "low", "unknown"],
     "purpose": "Confidence tier for source-type inference. Proportion at each tier is a direct provenance maturity metric."
+  },
+  {
+    "url": "http://indicina.com/fhir/ext/ecds-ssor",
+    "valueType": "valueCode",
+    "vocabulary": ["EHR/PHR", "Administrative", "Clinical Registry/HIE", "Case Management/Disease Management"],
+    "mapping": "Derived from source-type via SSoR mapping rule in dqar-05-source-inference-algorithm.md",
+    "purpose": "NCQA ECDS Source of Record (SSoR) category. Four-value NCQA vocabulary. Null when source-type = unknown — triggers Tier 1 governance finding. Enables SSoR distribution reporting across the extract."
   }
 ]
 ```
 
-Note: six extension fields total (EXT 1–4 original + EXT 5 source-feed-id + EXT 6 inference-confidence).
+Note: seven extension fields total (EXT 1–4 original + EXT 5 source-feed-id + EXT 6 inference-confidence + EXT 7 ecds-ssor).
 
 ### Atomic transaction bundle pattern
 
@@ -354,12 +384,13 @@ Note: six extension fields total (EXT 1–4 original + EXT 5 source-feed-id + EX
         "source": { "observer": { "display": "Indicina DQAR Sandbox" } },
         "entity": [{ "what": { "reference": "Condition/pat-abc123-cond-001" } }],
         "extension": [
-          { "url": "http://indicina.com/fhir/ext/source-type", "valueCode": "ehr-clinical" },
+          { "url": "http://indicina.com/fhir/ext/source-type", "valueCode": "clinical_ehr" },
           { "url": "http://indicina.com/fhir/ext/source-system-id", "valueString": "epic-prod-org447" },
           { "url": "http://indicina.com/fhir/ext/hedis-source-declaration", "valueCode": "ecds-ehr" },
           { "url": "http://indicina.com/fhir/ext/ingest-pipeline-id", "valueString": "dqar-20251014-001/epic-prod-org447/Condition.ndjson-chunk-003" },
           { "url": "http://indicina.com/fhir/ext/source-feed-id", "valueString": "epic-prod-org447" },
-          { "url": "http://indicina.com/fhir/ext/source-inference-confidence", "valueCode": "asserted" }
+          { "url": "http://indicina.com/fhir/ext/source-inference-confidence", "valueCode": "asserted" },
+          { "url": "http://indicina.com/fhir/ext/ecds-ssor", "valueCode": "EHR/PHR" }
         ]
       },
       "request": { "method": "POST", "url": "AuditEvent" }
@@ -372,26 +403,37 @@ Note: six extension fields total (EXT 1–4 original + EXT 5 source-feed-id + EX
 
 ## Source-Type Inference Algorithm
 
-Applied when feed manifest does not explicitly declare source-type for a resource and `meta.source` is absent. See `dqar-05-source-inference-algorithm.md` for full decision tree.
+Applied when feed manifest does not explicitly declare source-type for a resource and `meta.source` is absent. See `dqar-05-source-inference-algorithm.md` for full decision tree and Tier A/Tier B detectability framework.
 
 ### Quick reference
 
-| Signal | Source-type | Confidence |
-|---|---|---|
-| feed manifest declaration | as declared | asserted |
-| meta.source present | URI-derived | asserted |
-| ExplanationOfBenefit | administrative | high |
-| MedicationDispense | pharmacy | high |
-| Observation category=laboratory | lab | high |
-| Observation category=vital-signs | ehr-clinical | high |
-| Condition + SNOMED + verificationStatus | ehr-clinical | medium |
-| Condition + ICD-10-CM only | administrative | medium |
-| Encounter + CPT codes + sparse participants | administrative | medium |
-| Encounter + SNOMED + rich participants | ehr-clinical | medium |
-| Topology cluster match | cluster-derived | low |
-| No signals | unknown | unknown |
+| Signal | Source-type | Confidence | SSoR |
+|---|---|---|---|
+| Feed manifest (any type) | as declared | asserted | per mapping |
+| meta.source — EHR vendor URI | `clinical_ehr` | asserted | EHR/PHR |
+| meta.source — PHR/patient-app URI | `clinical_phr` | asserted | EHR/PHR |
+| meta.source — HIE/CommonWell/Carequality | `clinical_hie` | asserted | Clinical Registry/HIE |
+| meta.source — registry URI | `clinical_registry` | asserted | Clinical Registry/HIE |
+| meta.source — case management URI | `case_management` | asserted | Case Management/Disease Management |
+| meta.source — disease management URI | `disease_management` | asserted | Case Management/Disease Management |
+| meta.source — PBM URI | `pharmacy_pbm` | asserted | Administrative |
+| meta.source — specialty pharmacy URI | `pharmacy_specialty` | asserted | Administrative |
+| meta.source — lab URI | `clinical_lab` | asserted | Clinical Registry/HIE |
+| meta.source — P2P/PDex URI | `payer_exchange` | asserted | EHR/PHR |
+| meta.source — claims/billing URI | `administrative_claims` | asserted | Administrative |
+| ExplanationOfBenefit / Claim / Coverage | `administrative_claims` | high | Administrative |
+| MedicationDispense (PBM identifier) | `pharmacy_pbm` | high | Administrative |
+| MedicationDispense (specialty identifier) | `pharmacy_specialty` | high | Administrative |
+| Observation.category = laboratory | `clinical_lab` | high | Clinical Registry/HIE |
+| Observation.category = vital-signs/exam/survey | `clinical_ehr` | high | EHR/PHR |
+| Condition + SNOMED + verificationStatus=confirmed | `clinical_ehr` | medium | EHR/PHR |
+| Condition + ICD-10 only, no verificationStatus | `administrative_claims` | medium | Administrative |
+| Encounter + SNOMED + rich participants | `clinical_ehr` | medium | EHR/PHR |
+| Encounter + CPT + no participants | `administrative_encounter` | medium | Administrative |
+| Topology cluster match | cluster-derived | low | per cluster |
+| No signals | `unknown` | unknown | None → Tier 1 finding |
 
-**Undeclared source finding:** Resources where `source-feed-id = unknown` and feed manifest was provided are documented as undeclared source findings — data flowing from systems not in the plan's own inventory.
+**Tier B types** (`clinical_phr`, `clinical_hie`, `clinical_registry`, `case_management`, `disease_management`, `pharmacy_specialty`) are structurally indistinguishable from `clinical_ehr` at Priorities 3–6. They require feed manifest or `meta.source` declaration. Resources falling to `unknown` because of absent Tier B declaration are Tier 1 metadata management governance findings.
 
 ---
 
@@ -455,17 +497,17 @@ $$ LANGUAGE SQL;
 
 **CBP — Controlling Blood Pressure**
 - Denominator: members 18-85 with hypertension diagnosis (value set OID: 2.16.840.1.113883.3.464.1003.104.12.1003)
-- Level 3 checks: outpatient or telehealth encounter type (class AMB or VR), measurement year date window, blood pressure Observation linked to qualifying encounter
+- Level 3 checks: outpatient or telehealth encounter type (class AMB or VR), measurement period date window, blood pressure Observation linked to qualifying encounter
 - Key failure mode: encounter type constraint — inpatient BP readings should not qualify denominator
 
 **CDC — Comprehensive Diabetes Care**
 - Multiple numerators: HbA1c testing, HbA1c control, eye exam, kidney health evaluation, blood pressure
-- Level 3 checks: HbA1c LOINC code in correct value set, result value in physiological range (4-15%), result date within measurement year, performing lab linked
+- Level 3 checks: HbA1c LOINC code in correct value set, result value in physiological range (4-15%), result date within measurement period, performing lab linked
 - Key failure mode: HbA1c LOINC cross-mapping errors (lab-specific local codes not mapped to standard LOINC)
 
 **COL-E — Colorectal Cancer Screening ECDS**
 - Denominator: members 45-75
-- Level 3 checks: age constraint applied at measurement year end, exclusion codes in correct context (colorectal cancer diagnosis, colectomy), screening procedure in correct value set
+- Level 3 checks: age constraint applied at measurement period end, exclusion codes in correct context (colorectal cancer diagnosis, colectomy), screening procedure in correct value set
 - Key failure mode: exclusion code applied to wrong encounter type silently suppressing eligible members
 
 **BCS-E — Breast Cancer Screening ECDS**
@@ -492,16 +534,17 @@ Full query implementations: `queries/level3/` directory in the UC1 app repo.
   "assessment_date": "2025-10-14",
   "plan_size": "500K-2M",
   "findings": {
-    "tier1_compliance_gaps": [
+    "tier1_governance_gaps": [
       {
-        "finding_id": "T1-001",
+        "finding_id": "G1-001",
         "domain": "Domain 2 — Value Set Conformance",
-        "description": "CBP denominator binding using MY2024 hypertension value set — 3 retired ICD-10 codes still active in production",
+        "description": "CBP denominator binding using MP2024 hypertension value set — 3 retired ICD-10 codes still active in production. No terminology governance process detected this drift across measurement periods.",
+        "governance_root_cause": "Absent year-round VSD governance — no process to validate value set currency at NCQA release + 30 days",
         "severity": "HIGH",
         "affected_members": 1247,
         "rate_impact_estimate": "1.2 percentage points",
         "remediation_owner": "Terminology governance",
-        "remediation_timeline": "Days — VSD update required"
+        "remediation_timeline": "Days to fix binding — weeks to implement governance process"
       }
     ],
     "tier2_measure_data_gaps": [],
@@ -511,7 +554,7 @@ Full query implementations: `queries/level3/` directory in the UC1 app repo.
         "domain": "Domain 6 — ECDS Readiness",
         "description": "No meta.source or Provenance resources present in extract. Source-type inferred for 89% of resources. Inference confidence: high 34%, medium 41%, low 14%, unknown 11%.",
         "severity": "MEDIUM",
-        "my2029_risk": "HIGH — NCQA provenance evaluation methodology hardening",
+        "mp2029_risk": "HIGH — NCQA provenance evaluation methodology hardening",
         "remediation_owner": "FHIR server / integration team",
         "remediation_timeline": "Weeks — meta.source population on all writes"
       }
@@ -533,12 +576,26 @@ Full query implementations: `queries/level3/` directory in the UC1 app repo.
 
 ## Technology Stack
 
+### Client-side conformance testing kit (Stage 1, runs on plan infrastructure)
+
+| Component | Rung 1–2 default | Rung 3+ upgrade | Notes |
+|---|---|---|---|
+| Bulk FHIR API conformance | stage1a_bulk_fhir_export_preflight (Python) | stage1a_bulk_fhir_export_preflight (same) | Live server test — no validator dependency |
+| ndjson validator (Stage 1b) | stage1b_ndjson_validator (Python) | stage1b_ndjson_validator (same) | No external dependency |
+| FHIR R4 structural conformance testing | HAPI Validator CLI | Aidbox native conformance testing | HAPI: no vendor contract needed |
+| US Core 6.1.0 conformance | HAPI Validator CLI + US Core IG | Aidbox native validation | HAPI: runs anywhere Java available |
+| Report output | JSON + PDF render | JSON + PDF render | Three reports per kit run |
+
+**Validator backend is a deliberate ladder design decision.** HAPI is the default because it requires no Health Samurai contract, no HIPAA review, no procurement — the client runs it on their own infrastructure with no external dependencies beyond a Java runtime. When the plan advances to Rung 3 and has Aidbox in production, the conformance testing backend switches to Aidbox native conformance testing, which provides richer error metadata, write-time conformance testing rather than post-hoc, and consistent behaviour between the client kit and the sandbox. The reports are structurally identical regardless of backend — the findings format does not change.
+
+### Indicina sandbox (Stages 3–5, runs on Indicina/Health Samurai infrastructure)
+
 | Component | Technology | Version |
 |---|---|---|
 | FHIR server | Aidbox (Health Samurai) | Current |
 | Terminology server | Termbox (Health Samurai) | Current |
 | Database | PostgreSQL (Aidbox-managed) | 14+ |
-| FHIR validation | HAPI FHIR Validator CLI | Latest |
+| FHIR validation (sandbox) | Aidbox native + HAPI CLI | Latest |
 | US Core IG | hl7.fhir.us.core | 6.1.0 |
 | SQL on FHIR | SQL on FHIR v2 ViewDefinition | HL7 spec |
 | Anonymization | Python 3.11+ | — |

@@ -1,6 +1,6 @@
 # Source-Type Inference Algorithm
 **DQAR Shared Knowledge Base — Domain 3 / UC1 Pipeline**
-*Version: June 2026 | Used by: UC1 Assessment App, UC4, UC5*
+*Version: June 2026 v2 | Used by: UC1 Assessment App, UC3, UC4, UC5*
 
 ---
 
@@ -8,12 +8,96 @@
 
 When a client FHIR extract carries no `meta.source` URI and no Provenance resources, the UC1 ingest pipeline cannot directly read the originating source system type. This algorithm infers source-type and source-system-id from FHIR resource structure using signals that US Core 6.1.0 conformance requires to be present.
 
-**The inference result drives three AuditEvent extension fields:**
+**The inference result drives four AuditEvent extension fields:**
 - `http://indicina.com/fhir/ext/source-type`
 - `http://indicina.com/fhir/ext/source-system-id`
 - `http://indicina.com/fhir/ext/source-inference-confidence`
+- `http://indicina.com/fhir/ext/ecds-ssor` ← derived from source-type via SSoR mapping rule
 
-**The `hedis-source-declaration` field (EXT 3) is derived from source-type via a direct vocabulary map — no inference required.**
+**The `hedis-source-declaration` field (EXT 3) is also derived from source-type via direct vocabulary map — no independent inference required.**
+
+---
+
+## Source-Type Vocabulary — Expanded
+
+The source-type vocabulary is layered into two tiers based on what the algorithm can detect from FHIR resource signals alone versus what requires explicit declaration in the feed manifest or `meta.source`.
+
+### Tier A — Structurally detectable (Priorities 3–6 can resolve without manifest)
+
+| source-type | Description | Primary signal |
+|---|---|---|
+| `clinical_ehr` | EHR clinical data | SNOMED codes + verificationStatus + recorder + rich Encounter participants; vital-signs/exam/survey Observation categories |
+| `administrative_claims` | Claims / adjudicated data | ExplanationOfBenefit, Claim, ClaimResponse (determinative); ICD-10-only Condition |
+| `administrative_encounter` | Encounter-based administrative | CPT-coded Encounter with no participants |
+| `pharmacy_pbm` | PBM pharmacy dispensing | MedicationDispense (determinative); known PBM identifier system URIs |
+| `clinical_lab` | Laboratory results | Observation.category = `laboratory` (US Core MUST SUPPORT — not inference, a declaration) |
+| `payer_exchange` | P2P data from another payer | PDex meta.profile; Provenance with payer agent type; PDex-specific resource patterns |
+
+### Tier B — Manifest/meta.source declared only (structural signals cannot distinguish these)
+
+| source-type | Description | Why structurally indistinguishable | Governance implication |
+|---|---|---|---|
+| `clinical_phr` | Patient-facing app / PHR data | FHIR resource structure identical to EHR data | Requires `meta.source` URI or manifest declaration |
+| `pharmacy_specialty` | Specialty pharmacy dispensing | MedicationDispense — only identifier system URI distinguishes from PBM | Requires known specialty pharmacy URI list in manifest |
+| `clinical_hie` | HIE-aggregated clinical data | Condition/Observation structurally identical to EHR | Requires `meta.source` URI (CommonWell, Carequality) or manifest |
+| `clinical_registry` | Clinical registry data | Structurally identical to EHR data | Requires `meta.source` URI or manifest |
+| `case_management` | Case management program data | Condition/Encounter structurally identical to EHR | Manifest only — no structural signal |
+| `disease_management` | Disease management program data | Condition/Encounter structurally identical to EHR | Manifest only — no structural signal |
+
+**Tier B types defaulting to `unknown` are a Tier 1 governance finding.** If a plan has case management or disease management data flowing into their FHIR pipeline without feed manifest declaration and without `meta.source` population, the algorithm cannot classify it. That `unknown` is direct evidence of a metadata management governance gap — the algorithm's limitation proves the finding. The feed manifest discipline required to make Tier B types resolvable is precisely the DAMA-BOK metadata management capability assessed in Track B Level 6.
+
+---
+
+## Vocabulary-to-SSoR Mapping Rule
+
+NCQA ECDS SSoR (Source of Record) has four categories. The mapping from source-type to SSoR is a deterministic rule — no inference required.
+
+```python
+SOURCE_TYPE_TO_SSOR = {
+    # EHR/PHR
+    'clinical_ehr':              'EHR/PHR',
+    'clinical_phr':              'EHR/PHR',
+    'payer_exchange':            'EHR/PHR',     # P2P data originates from payer EHR/claims mix
+
+    # Administrative
+    'administrative_claims':     'Administrative',
+    'administrative_encounter':  'Administrative',
+    'pharmacy_pbm':              'Administrative',
+    'pharmacy_specialty':        'Administrative',
+
+    # Clinical Registry/HIE
+    'clinical_lab':              'Clinical Registry/HIE',
+    'clinical_hie':              'Clinical Registry/HIE',
+    'clinical_registry':         'Clinical Registry/HIE',
+
+    # Case Management/Disease Management
+    'case_management':           'Case Management/Disease Management',
+    'disease_management':        'Case Management/Disease Management',
+
+    # Unresolvable — triggers finding
+    'unknown':                    None,          # SSoR not attributable — Tier 1 governance finding
+}
+```
+
+## Vocabulary-to-HEDIS-Declaration Mapping Rule
+
+```python
+SOURCE_TYPE_TO_HEDIS = {
+    'clinical_ehr':              'ecds-ehr',
+    'clinical_phr':              'ecds-ehr',
+    'administrative_claims':     'ecds-administrative',
+    'administrative_encounter':  'ecds-administrative',
+    'pharmacy_pbm':              'ecds-pharmacy',
+    'pharmacy_specialty':        'ecds-pharmacy',
+    'clinical_lab':              'ecds-lab',
+    'clinical_hie':              'ecds-ehr',       # HIE-aggregated treated as EHR for HEDIS
+    'clinical_registry':         'ecds-ehr',       # Registry data treated as EHR for HEDIS
+    'case_management':           'ecds-ehr',       # Case management treated as EHR for HEDIS
+    'disease_management':        'ecds-ehr',       # Disease management treated as EHR for HEDIS
+    'payer_exchange':            'ecds-p2p',
+    'unknown':                   'ecds-unknown',
+}
+```
 
 ---
 
@@ -23,7 +107,7 @@ US Core 6.1.0 mandates `Observation.category` as a MUST SUPPORT element. This si
 
 The US Core profile set is organized around this: there is not one Observation profile but many, each with a fixed category constraint. When a FHIR server produces a valid US Core Observation, it has already declared its category, which means the inference algorithm does not infer — it reads.
 
-Inference only becomes probabilistic for Condition, Encounter, and Procedure, where the profile does not distinguish clinical from administrative origin.
+Inference only becomes probabilistic for Condition, Encounter, and Procedure, where the profile does not distinguish clinical from administrative origin. Tier B types (PHR, HIE, registry, case management, disease management) are structurally indistinguishable from `clinical_ehr` at the resource level — they require feed manifest or `meta.source` declaration.
 
 ---
 
@@ -60,35 +144,54 @@ def get_source_from_manifest(resource, feed_manifest):
 
 ## Priority 2 — meta.source URI (asserted confidence)
 
+Priority 2 is the primary resolution path for Tier B source types. A well-populated `meta.source` URI can resolve all twelve source types including those structurally indistinguishable from `clinical_ehr`.
+
 ```python
 def get_source_from_meta(resource):
     """
-    Derive source-type and feed-id from meta.source if present.
+    Derive source-type from meta.source URI if present.
     Returns (source_type, source_system_id, confidence='asserted') or None.
+    Resolves all Tier A and Tier B source types.
     """
     meta_source = resource.get('meta', {}).get('source')
     if not meta_source:
         return None
-    
+
     uri = meta_source.lower()
-    
-    # Source-type inference from URI patterns
-    if any(k in uri for k in ['epic', 'cerner', 'meditech', 'allscripts', 'ehr', 'emr', 'clinical']):
-        source_type = 'ehr-clinical'
-    elif any(k in uri for k in ['claims', 'edw', 'adjudic', 'eob', 'billing']):
-        source_type = 'administrative'
-    elif any(k in uri for k in ['lab', 'quest', 'labcorp', 'pathology', 'lims']):
-        source_type = 'lab'
-    elif any(k in uri for k in ['pharmacy', 'pbm', 'rxclaim', 'medco', 'express-scripts']):
-        source_type = 'pharmacy'
-    elif any(k in uri for k in ['p2p', 'payer', 'exchange', 'pdex']):
-        source_type = 'p2p'
+
+    # Tier B — must be detected here; structural inference cannot distinguish
+    if any(k in uri for k in ['phr', 'myhealth', 'patient-app', 'personal-health']):
+        source_type = 'clinical_phr'
+    elif any(k in uri for k in ['commonwell', 'carequality', 'hie', 'health-information-exchange', 'rhio']):
+        source_type = 'clinical_hie'
+    elif any(k in uri for k in ['registry', 'clinical-registry', 'oncology-registry', 'cardiac-registry']):
+        source_type = 'clinical_registry'
+    elif any(k in uri for k in ['case-management', 'case_management', 'care-management', 'casemanagement']):
+        source_type = 'case_management'
+    elif any(k in uri for k in ['disease-management', 'disease_management', 'dm-program', 'chronic-care']):
+        source_type = 'disease_management'
+
+    # Tier A — also resolvable from meta.source with higher specificity
+    elif any(k in uri for k in ['specialty-pharmacy', 'specialty_pharmacy', 'biologics', 'accredo', 'cvs-specialty']):
+        source_type = 'pharmacy_specialty'
+    elif any(k in uri for k in ['pharmacy', 'pbm', 'rxclaim', 'medco', 'express-scripts', 'caremark', 'optumrx']):
+        source_type = 'pharmacy_pbm'
+    elif any(k in uri for k in ['quest', 'labcorp', 'lab', 'pathology', 'lims', 'laboratory']):
+        source_type = 'clinical_lab'
+    elif any(k in uri for k in ['p2p', 'pdex', 'payer-exchange', 'payer_exchange', 'interopability']):
+        source_type = 'payer_exchange'
+    elif any(k in uri for k in ['claims', 'edw', 'adjudic', 'eob', 'billing', 'administrative']):
+        source_type = 'administrative_claims'
+    elif any(k in uri for k in ['encounter', 'visit', 'facility-encounter']):
+        source_type = 'administrative_encounter'
+    elif any(k in uri for k in ['epic', 'cerner', 'meditech', 'allscripts', 'athena', 'ehr', 'emr', 'clinical']):
+        source_type = 'clinical_ehr'
     else:
-        source_type = 'ehr-clinical'  # default assumption for unrecognized URIs
-    
+        source_type = 'clinical_ehr'  # default for unrecognized URIs — asserted but less specific
+
     import hashlib
     source_id = 'meta-' + hashlib.sha256(meta_source.encode()).hexdigest()[:12]
-    
+
     return {
         'source_type': source_type,
         'source_feed_id': source_id,
@@ -101,21 +204,32 @@ def get_source_from_meta(resource):
 
 ## Priority 3 — Resource Type Inference (high confidence)
 
-Determinative resource types require no signal beyond `resourceType`:
+Determinative resource types require no signal beyond `resourceType`. These are Tier A types — structurally unambiguous.
 
 ```python
 DETERMINATIVE_RESOURCE_TYPES = {
-    'ExplanationOfBenefit': ('administrative', 'high'),
-    'Claim':                ('administrative', 'high'),
-    'ClaimResponse':        ('administrative', 'high'),
-    'MedicationDispense':   ('pharmacy',       'high'),
-    'Coverage':             ('administrative', 'high'),
+    'ExplanationOfBenefit': ('administrative_claims',    'high'),
+    'Claim':                ('administrative_claims',    'high'),
+    'ClaimResponse':        ('administrative_claims',    'high'),
+    'Coverage':             ('administrative_claims',    'high'),
+    'MedicationDispense':   ('pharmacy_pbm',             'high'),  # refined to pharmacy_specialty
+                                                                    # at Priority 2 if meta.source present
 }
 
 def get_source_from_resource_type(resource):
     rt = resource.get('resourceType')
     if rt in DETERMINATIVE_RESOURCE_TYPES:
         source_type, confidence = DETERMINATIVE_RESOURCE_TYPES[rt]
+        # Refine MedicationDispense: check identifier systems for specialty pharmacy URIs
+        if rt == 'MedicationDispense':
+            id_systems = [
+                i.get('system', '').lower()
+                for i in resource.get('identifier', [])
+            ]
+            specialty_signals = ['specialty', 'biologics', 'accredo', 'cvs-specialty',
+                                  'walgreens-specialty', 'coram', 'bioscrip']
+            if any(sig in sys for sys in id_systems for sig in specialty_signals):
+                source_type = 'pharmacy_specialty'
         return {
             'source_type': source_type,
             'confidence': confidence,
@@ -128,20 +242,20 @@ def get_source_from_resource_type(resource):
 
 ## Priority 4 — Observation Category (high confidence)
 
-US Core 6.1.0 requires `Observation.category` as MUST SUPPORT. Reading category is not inference — it is reading a required declaration.
+US Core 6.1.0 requires `Observation.category` as MUST SUPPORT. Reading category is not inference — it is reading a required declaration. `laboratory` maps directly to `clinical_lab`; all other clinical categories map to `clinical_ehr`.
 
 ```python
 OBSERVATION_CATEGORY_MAP = {
-    'laboratory':     ('lab',          'high'),
-    'vital-signs':    ('ehr-clinical', 'high'),
-    'clinical-test':  ('ehr-clinical', 'high'),
-    'exam':           ('ehr-clinical', 'high'),
-    'survey':         ('ehr-clinical', 'high'),
-    'social-history': ('ehr-clinical', 'high'),
-    'activity':       ('ehr-clinical', 'high'),
-    'imaging':        ('ehr-clinical', 'high'),
-    'procedure':      ('ehr-clinical', 'high'),
-    'therapy':        ('ehr-clinical', 'high'),
+    'laboratory':     ('clinical_lab', 'high'),   # Clinical Registry/HIE → SSoR
+    'vital-signs':    ('clinical_ehr', 'high'),
+    'clinical-test':  ('clinical_ehr', 'high'),
+    'exam':           ('clinical_ehr', 'high'),
+    'survey':         ('clinical_ehr', 'high'),
+    'social-history': ('clinical_ehr', 'high'),
+    'activity':       ('clinical_ehr', 'high'),
+    'imaging':        ('clinical_ehr', 'high'),
+    'procedure':      ('clinical_ehr', 'high'),
+    'therapy':        ('clinical_ehr', 'high'),
 }
 
 def get_source_from_observation_category(resource):
@@ -165,7 +279,7 @@ def get_source_from_observation_category(resource):
 
 ## Priority 5 — Secondary Signal Inference (medium confidence)
 
-For Condition, Encounter, Procedure where resource type alone is not determinative.
+For Condition, Encounter, Procedure where resource type alone is not determinative. Note: this priority can only distinguish `clinical_ehr` from `administrative_claims` / `administrative_encounter`. It cannot resolve Tier B types — those remain `unknown` if not declared in manifest or `meta.source`.
 
 ```python
 def get_source_from_secondary_signals(resource):
@@ -173,14 +287,13 @@ def get_source_from_secondary_signals(resource):
     signals = []
     ehr_score = 0
     admin_score = 0
-    
+
     if rt == 'Condition':
-        # Code system signals
         codes = resource.get('code', {}).get('coding', [])
         systems = [c.get('system', '') for c in codes]
         has_snomed = any('snomed' in s.lower() for s in systems)
         has_icd10  = any('icd-10' in s.lower() or 'icd10' in s.lower() for s in systems)
-        
+
         if has_snomed and not has_icd10:
             ehr_score += 2
             signals.append('SNOMED-only')
@@ -188,10 +301,9 @@ def get_source_from_secondary_signals(resource):
             admin_score += 2
             signals.append('ICD10-only')
         elif has_snomed and has_icd10:
-            ehr_score += 1  # dual-coded suggests EHR with claims mapping
+            ehr_score += 1
             signals.append('dual-coded')
-        
-        # verificationStatus signals
+
         vs = resource.get('verificationStatus', {}).get('coding', [{}])[0].get('code', '')
         if vs == 'confirmed':
             ehr_score += 2
@@ -199,19 +311,16 @@ def get_source_from_secondary_signals(resource):
         elif not vs:
             admin_score += 1
             signals.append('verificationStatus=absent')
-        
-        # onset date signals
+
         if resource.get('onsetDateTime') or resource.get('onsetPeriod'):
             ehr_score += 1
             signals.append('onset-date-present')
-        
-        # recorder signals
+
         if resource.get('recorder'):
             ehr_score += 2
             signals.append('recorder-present')
-    
+
     elif rt == 'Encounter':
-        # Type coding system signals
         enc_types = resource.get('type', [])
         for et in enc_types:
             for coding in et.get('coding', []):
@@ -224,8 +333,7 @@ def get_source_from_secondary_signals(resource):
                     ehr_score += 2
                     signals.append('SNOMED-type-code')
                     break
-        
-        # Participant count signals
+
         participants = resource.get('participant', [])
         if len(participants) > 1:
             ehr_score += 2
@@ -233,59 +341,67 @@ def get_source_from_secondary_signals(resource):
         elif len(participants) == 0:
             admin_score += 1
             signals.append('no-participants')
-        
-        # Location signals
+
         if resource.get('location'):
             ehr_score += 1
             signals.append('location-present')
-    
+
     elif rt == 'Procedure':
         codes = resource.get('code', {}).get('coding', [])
         systems = [c.get('system', '') for c in codes]
         has_snomed = any('snomed' in s.lower() for s in systems)
         has_cpt    = any('cpt' in s.lower() or 'hcpcs' in s.lower() for s in systems)
-        
+
         if has_snomed:
             ehr_score += 2
             signals.append('SNOMED-procedure')
         if has_cpt and not has_snomed:
             admin_score += 1
             signals.append('CPT-only')
-        
+
         if resource.get('performer'):
             ehr_score += 2
             signals.append('performer-present')
-    
+
     else:
-        return None  # resource type not handled by secondary signals
-    
-    # Score to source-type
+        return None
+
     if ehr_score == 0 and admin_score == 0:
         return None
-    
+
     if ehr_score > admin_score:
         return {
-            'source_type': 'ehr-clinical',
+            'source_type': 'clinical_ehr',
+            'confidence': 'medium',
+            'inference_basis': ', '.join(signals),
+            'ehr_score': ehr_score,
+            'admin_score': admin_score
+        }
+    elif admin_score > ehr_score:
+        # Distinguish encounter vs claims by resource type
+        source_type = 'administrative_encounter' if rt == 'Encounter' else 'administrative_claims'
+        return {
+            'source_type': source_type,
             'confidence': 'medium',
             'inference_basis': ', '.join(signals),
             'ehr_score': ehr_score,
             'admin_score': admin_score
         }
     else:
+        # Tied score — default to ehr with lower confidence
         return {
-            'source_type': 'administrative',
-            'confidence': 'medium',
-            'inference_basis': ', '.join(signals),
+            'source_type': 'clinical_ehr',
+            'confidence': 'low',
+            'inference_basis': f'tied-score: {", ".join(signals)}',
             'ehr_score': ehr_score,
             'admin_score': admin_score
         }
 ```
-
 ---
 
 ## Priority 6 — Topology Cluster (low confidence)
 
-When no individual resource signals are available, group by structural fingerprint. Resources with identical fingerprints likely share origin.
+When no individual resource signals are available, group by structural fingerprint. Resources with identical fingerprints likely share origin. Note: topology clustering can only resolve Tier A types — it cannot distinguish Tier B types from `clinical_ehr`.
 
 ```python
 import hashlib
@@ -293,55 +409,48 @@ import json
 
 def compute_topology_fingerprint(resource):
     """
-    Stable fingerprint from structural properties.
+    Stable fingerprint from structural properties only.
     Does not include any patient data.
     """
     rt = resource.get('resourceType', '')
-    
-    # Code systems used
+
     code_systems = set()
     for coding in resource.get('code', {}).get('coding', []):
         if coding.get('system'):
             code_systems.add(coding['system'])
-    
-    # Identifier systems used
+
     id_systems = set()
     for identifier in resource.get('identifier', []):
         if identifier.get('system'):
             id_systems.add(identifier['system'])
-    
-    # Which key fields are present (not their values)
+
     field_presence = {
-        'has_meta_source': bool(resource.get('meta', {}).get('source')),
-        'has_recorder': bool(resource.get('recorder')),
-        'has_performer': bool(resource.get('performer')),
-        'has_participants': bool(resource.get('participant')),
-        'has_location': bool(resource.get('location')),
-        'has_onset': bool(resource.get('onsetDateTime') or resource.get('onsetPeriod')),
+        'has_meta_source':         bool(resource.get('meta', {}).get('source')),
+        'has_recorder':            bool(resource.get('recorder')),
+        'has_performer':           bool(resource.get('performer')),
+        'has_participants':        bool(resource.get('participant')),
+        'has_location':            bool(resource.get('location')),
+        'has_onset':               bool(resource.get('onsetDateTime') or resource.get('onsetPeriod')),
         'has_verification_status': bool(resource.get('verificationStatus')),
         'category_codes': sorted([
-            c.get('code', '') 
+            c.get('code', '')
             for cat in resource.get('category', [])
             for c in cat.get('coding', [])
         ]),
     }
-    
+
     fingerprint_data = {
-        'resource_type': rt,
-        'code_systems': sorted(code_systems),
+        'resource_type':      rt,
+        'code_systems':       sorted(code_systems),
         'identifier_systems': sorted(id_systems),
-        'field_presence': field_presence,
+        'field_presence':     field_presence,
     }
-    
+
     fingerprint_str = json.dumps(fingerprint_data, sort_keys=True)
     return 'topology-' + hashlib.sha256(fingerprint_str.encode()).hexdigest()[:8]
 
 
 def get_source_from_topology_cluster(resource, cluster_registry):
-    """
-    Look up cluster registry to find if this fingerprint has been
-    previously resolved to a source-type.
-    """
     fingerprint = compute_topology_fingerprint(resource)
     if fingerprint in cluster_registry:
         cluster = cluster_registry[fingerprint]
@@ -352,7 +461,6 @@ def get_source_from_topology_cluster(resource, cluster_registry):
             'inference_basis': f'topology-cluster-{fingerprint}',
             'cluster_size': cluster['count'],
         }
-    # Register new cluster
     cluster_registry[fingerprint] = {
         'fingerprint': fingerprint,
         'resource_type': resource.get('resourceType'),
@@ -376,66 +484,94 @@ def infer_source_metadata(resource, feed_manifest=None, cluster_registry=None):
     """
     Run inference priorities in order. Return first successful result.
     Always returns a dict with source_type, source_feed_id,
-    source_system_id, confidence, and inference_basis.
+    source_system_id, hedis_source_declaration, ecds_ssor,
+    confidence, and inference_basis.
     """
     if cluster_registry is None:
         cluster_registry = {}
-    
-    # Priority 1: Feed manifest match
+
+    # Priority 1: Feed manifest — resolves all Tier A and Tier B types
     result = get_source_from_manifest(resource, feed_manifest)
     if result and result['confidence'] != 'unknown':
         return _build_result(resource, result)
-    
-    # Priority 2: meta.source
+
+    # Priority 2: meta.source URI — resolves all Tier A and Tier B types
     result = get_source_from_meta(resource)
     if result:
         return _build_result(resource, result)
-    
-    # Priority 3: Determinative resource type
+
+    # Priority 3: Determinative resource type — Tier A only
     result = get_source_from_resource_type(resource)
     if result:
         return _build_result(resource, result)
-    
-    # Priority 4: Observation category (US Core MUST SUPPORT)
+
+    # Priority 4: Observation category — Tier A only
     result = get_source_from_observation_category(resource)
     if result:
         return _build_result(resource, result)
-    
-    # Priority 5: Secondary signals (Condition, Encounter, Procedure)
+
+    # Priority 5: Secondary signals — Tier A only (clinical_ehr vs administrative)
     result = get_source_from_secondary_signals(resource)
     if result:
         return _build_result(resource, result)
-    
-    # Priority 6: Topology cluster
+
+    # Priority 6: Topology cluster — Tier A only, low confidence
     result = get_source_from_topology_cluster(resource, cluster_registry)
     return _build_result(resource, result)
 
 
 def _build_result(resource, inferred):
     """
-    Build complete source metadata result including
-    hedis-source-declaration vocabulary mapping.
+    Build complete AuditEvent extension metadata including:
+    - source-type (expanded vocabulary)
+    - hedis-source-declaration (ECDS attribution code)
+    - ecds-ssor (NCQA SSoR category)
+    - source-inference-confidence
     """
     SOURCE_TYPE_TO_HEDIS = {
-        'ehr-clinical':   'ecds-ehr',
-        'administrative': 'ecds-administrative',
-        'lab':            'ecds-lab',
-        'pharmacy':       'ecds-pharmacy',
-        'p2p':            'ecds-p2p',
-        'unknown':        'ecds-unknown',
+        'clinical_ehr':              'ecds-ehr',
+        'clinical_phr':              'ecds-ehr',
+        'administrative_claims':     'ecds-administrative',
+        'administrative_encounter':  'ecds-administrative',
+        'pharmacy_pbm':              'ecds-pharmacy',
+        'pharmacy_specialty':        'ecds-pharmacy',
+        'clinical_lab':              'ecds-lab',
+        'clinical_hie':              'ecds-ehr',
+        'clinical_registry':         'ecds-ehr',
+        'case_management':           'ecds-ehr',
+        'disease_management':        'ecds-ehr',
+        'payer_exchange':            'ecds-p2p',
+        'unknown':                   'ecds-unknown',
     }
-    
+
+    SOURCE_TYPE_TO_SSOR = {
+        'clinical_ehr':              'EHR/PHR',
+        'clinical_phr':              'EHR/PHR',
+        'payer_exchange':            'EHR/PHR',
+        'administrative_claims':     'Administrative',
+        'administrative_encounter':  'Administrative',
+        'pharmacy_pbm':              'Administrative',
+        'pharmacy_specialty':        'Administrative',
+        'clinical_lab':              'Clinical Registry/HIE',
+        'clinical_hie':              'Clinical Registry/HIE',
+        'clinical_registry':         'Clinical Registry/HIE',
+        'case_management':           'Case Management/Disease Management',
+        'disease_management':        'Case Management/Disease Management',
+        'unknown':                    None,
+    }
+
     source_type = inferred.get('source_type', 'unknown')
     feed_id = inferred.get('source_feed_id', 'unknown')
     sys_id = inferred.get('source_system_id', feed_id)
-    
+
     return {
-        'source_type':            source_type,
-        'source_system_id':       sys_id,
-        'source_feed_id':         feed_id,
-        'hedis_source_declaration': SOURCE_TYPE_TO_HEDIS.get(source_type, 'ecds-unknown'),
-        'confidence':             inferred.get('confidence', 'unknown'),
-        'inference_basis':        inferred.get('inference_basis', 'none'),
+        'source_type':               source_type,
+        'source_system_id':          sys_id,
+        'source_feed_id':            feed_id,
+        'hedis_source_declaration':  SOURCE_TYPE_TO_HEDIS.get(source_type, 'ecds-unknown'),
+        'ecds_ssor':                 SOURCE_TYPE_TO_SSOR.get(source_type),
+        'confidence':                inferred.get('confidence', 'unknown'),
+        'inference_basis':           inferred.get('inference_basis', 'none'),
     }
 ```
 
@@ -474,7 +610,7 @@ ORDER BY resource_count DESC;
 | >80% asserted | Governed — meta.source or Provenance implemented | No finding |
 | 50-80% high + asserted | Adequate — resource structure signals strong | Tier 3 advisory |
 | <50% high + asserted | Gap — inference-dependent | Tier 3 finding |
-| >20% unknown | Material gap — MY2029 risk | Tier 3 HIGH severity |
+| >20% unknown | Material gap — MP2029 risk | Tier 3 HIGH severity |
 
 ---
 

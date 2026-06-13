@@ -5,13 +5,14 @@ Tests the server's $export implementation against the SMART Bulk Data
 Access IG (https://hl7.org/fhir/uv/bulkdata/):
 
   1. capability_declares_export  — $export present in CapabilityStatement
-  2. kick_off_accepted           — POST/GET $export returns 202 Accepted
+  2. kick_off_accepted           — GET $export returns 202 Accepted
   3. content_location_header     — 202 response includes Content-Location
   4. polling_completes           — polling the status URL eventually returns 200
-  5. manifest_valid              — manifest has output[], requiresAccessToken
+  5. manifest_valid              — manifest has output[] and requiresAccessToken
   6. output_content_type         — output file URLs return application/fhir+ndjson
 
-Skipped automatically when Stage 1 preflight reports bulk_export_supported: false.
+Skipped automatically (status SKIPPED) if check 1 finds $export not declared
+in CapabilityStatement — checks 2–6 are meaningless without it.
 
 Output: data/stage1a-{engagement-name}.json
 """
@@ -36,9 +37,32 @@ def _check(name: str, passed: bool, detail: str = "") -> dict:
     return {"check": name, "passed": passed, "detail": detail}
 
 
+def _check_capability(base_url: str, headers: dict) -> tuple:
+    """
+    Query CapabilityStatement and verify $export is declared.
+    Returns (export_declared: bool, detail: str).
+    """
+    try:
+        response = requests.get(
+            f"{base_url}/fhir/metadata",
+            headers=headers,
+            timeout=30,
+        )
+        response.raise_for_status()
+        capability = response.json()
+    except Exception as exc:
+        return False, f"CapabilityStatement request failed: {exc}"
+
+    for rest_entry in capability.get("rest", []):
+        for op in rest_entry.get("operation", []):
+            if op.get("name") == "export":
+                return True, "$export operation declared in CapabilityStatement"
+
+    return False, "$export not declared in CapabilityStatement"
+
+
 def run(
     engagement_path: str,
-    preflight_report: str = "preflight-report.json",
     output_path: str = None,
 ) -> dict:
     engagement = load_engagement(engagement_path)
@@ -50,32 +74,29 @@ def run(
     print(f"  Engagement: {engagement.name} ({engagement.server_type})")
     print(f"  Server    : {engagement.base_url}\n")
 
-    # Check preflight report first — skip if $export not declared
-    if Path(preflight_report).exists():
-        with open(preflight_report) as f:
-            preflight = json.load(f)
-        if not preflight.get("bulk_export_supported", False):
-            report = {
-                "report_type": "bulk-fhir-conformance",
-                "stage": "1a",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "engagement": engagement.name,
-                "server_type": engagement.server_type,
-                "fhir_server": engagement.base_url,
-                "status": "SKIPPED",
-                "reason": "bulk_export_supported: false in preflight report — $export not declared in CapabilityStatement",
-                "checks": [],
-            }
-            _write(report, output_path)
-            print(f"  SKIPPED — $export not declared in CapabilityStatement")
-            print(f"  Report: {output_path}")
-            return report
-
     headers = get_fhir_headers(engagement)
     checks = []
 
-    # 1. Kick off export
-    print("  [1/6] Kicking off $export...", end=" ", flush=True)
+    # -----------------------------------------------------------------------
+    # Check 1: CapabilityStatement declares $export
+    # -----------------------------------------------------------------------
+    print("  [1/6] CapabilityStatement declares $export...", end=" ", flush=True)
+    export_declared, cap_detail = _check_capability(engagement.base_url, headers)
+    checks.append(_check("capability_declares_export", export_declared, cap_detail))
+    print("OK" if export_declared else "SKIP")
+
+    if not export_declared:
+        report = _build_report(engagement, "SKIPPED", checks)
+        report["reason"] = cap_detail + " — checks 2–6 skipped"
+        _write(report, output_path)
+        print(f"\nStage 1a SKIPPED — $export not declared in CapabilityStatement")
+        print(f"Report: {output_path}")
+        return report
+
+    # -----------------------------------------------------------------------
+    # Check 2: Kick off $export
+    # -----------------------------------------------------------------------
+    print("  [2/6] Kicking off $export...", end=" ", flush=True)
     try:
         kick_off = requests.get(
             f"{engagement.base_url}/fhir/$export",
@@ -92,18 +113,22 @@ def run(
         _write(_build_report(engagement, "FAIL", checks), output_path)
         return
 
-    # 2. Content-Location header
+    # -----------------------------------------------------------------------
+    # Check 3: Content-Location header
+    # -----------------------------------------------------------------------
     content_location = kick_off.headers.get("Content-Location")
     checks.append(_check("content_location_header", bool(content_location),
                           content_location or "header absent"))
-    print(f"  [2/6] Content-Location: {'present' if content_location else 'MISSING'}")
+    print(f"  [3/6] Content-Location: {'present' if content_location else 'MISSING'}")
 
     if not content_location:
         _write(_build_report(engagement, "FAIL", checks), output_path)
         return
 
-    # 3. Poll for completion
-    print(f"  [3/6] Polling status URL...", end=" ", flush=True)
+    # -----------------------------------------------------------------------
+    # Check 4: Poll for completion
+    # -----------------------------------------------------------------------
+    print(f"  [4/6] Polling status URL...", end=" ", flush=True)
     status_response = None
     for attempt in range(POLL_MAX_ATTEMPTS):
         status_response = requests.get(content_location, headers=headers, timeout=30)
@@ -123,7 +148,9 @@ def run(
         _write(_build_report(engagement, "FAIL", checks), output_path)
         return
 
-    # 4. Manifest structure
+    # -----------------------------------------------------------------------
+    # Check 5: Manifest structure
+    # -----------------------------------------------------------------------
     try:
         manifest = status_response.json()
     except Exception:
@@ -137,9 +164,11 @@ def run(
     checks.append(_check("manifest_valid", manifest_ok,
                           f"output={'present' if has_output else 'MISSING'}, "
                           f"requiresAccessToken={'present' if has_requires_token else 'MISSING'}"))
-    print(f"  [4/6] Manifest: {'OK' if manifest_ok else 'FAIL'}")
+    print(f"  [5/6] Manifest: {'OK' if manifest_ok else 'FAIL'}")
 
-    # 5. Output file content-type
+    # -----------------------------------------------------------------------
+    # Check 6: Output file content-type
+    # -----------------------------------------------------------------------
     output_files = manifest.get("output", [])[:3]  # spot-check first 3
     ct_ok = True
     ct_detail = []
@@ -158,7 +187,7 @@ def run(
             ct_detail.append(str(exc))
 
     checks.append(_check("output_content_type", ct_ok, "; ".join(ct_detail)))
-    print(f"  [5/6] Output Content-Type: {'OK' if ct_ok else 'FAIL'}")
+    print(f"  [6/6] Output Content-Type: {'OK' if ct_ok else 'FAIL'}")
 
     overall = "PASS" if all(c["passed"] for c in checks) else "FAIL"
     report = _build_report(engagement, overall, checks)
@@ -195,8 +224,7 @@ def _write(report: dict, output_path: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Stage 1a: Bulk FHIR API conformance")
     parser.add_argument("--engagement", required=True, help="Path to engagement config JSON")
-    parser.add_argument("--preflight-report", default="preflight-report.json")
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
-    run(args.engagement, args.preflight_report, args.output)
+    run(args.engagement, args.output)

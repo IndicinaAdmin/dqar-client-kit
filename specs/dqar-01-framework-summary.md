@@ -8,14 +8,23 @@
 
 The Digital Quality Audit Readiness (DQAR) is Indicina's proprietary methodology for assessing health payer readiness for digital quality reporting. It replaces the manual, PSV-heavy HEDIS compliance audit paradigm with a FHIR-native, automated, standards-conformant, and semantically rigorous assessment framework.
 
-**Indicina's position:** Advisory and consulting only. Indicina does not pursue NCQA audit certification and does not act as a certified HEDIS auditor. The DQAR is a pre-audit readiness and digital transformation advisory service, complementary to — not competitive with — certified HEDIS auditors.
+**Indicina's position:** Indicina provides the validation services that health plans do not have the internal bandwidth to perform. Most plans have quality and analytics staff who understand HEDIS reporting — they do not have staff with the FHIR semantic validation, data lineage, and digital measure readiness expertise to assess their own pipelines rigorously. Indicina fills that gap.
+
+Indicina does not pursue NCQA audit certification and does not act as a certified HEDIS auditor. The DQAR is a pre-audit readiness and digital transformation assessment service — the independent validation layer that sits upstream of the certified audit and upstream of the plan's own quality team.
+
+**Remediation is the plan's choice.** The DQAR assessment produces findings. What the plan does with those findings is entirely up to them:
+- **Internal staff** — the plan remediates using their own engineering and informatics teams. Indicina's findings report gives them the prioritized roadmap.
+- **Indicina staff** — Indicina provides hands-on remediation advisory, implementation oversight, and validation of the fix. The $4K/month retainer covers this ongoing engagement.
+- **Health Samurai staff** — where findings point to FHIR infrastructure gaps (Aidbox configuration, Termbox integration, Interbox pipeline instrumentation), Health Samurai provides the implementation. Indicina remains as independent validation that the remediation actually closes the finding.
+
+This flexibility is a feature, not a gap. Plans at different maturity levels need different remediation paths. A plan with strong internal engineering needs only the findings and roadmap. A plan with no internal FHIR capability needs Indicina and Health Samurai to do the work. The assessment is the constant; the remediation path is the plan's decision.
 
 ---
 
 ## The Core Thesis
 
 Most U.S. health payers have:
-- A FHIR surface that passes structural validation ✅
+- A FHIR surface that passes structural conformance testing ✅
 - A data lakehouse for claims analytics ✅
 - **Nothing between those layers that validates whether clinical data feeding HEDIS measure execution actually means what the measure specification requires** ❌
 
@@ -30,7 +39,7 @@ Condensed version:
 
 ### The NCQA DCS Positioning — Secondary Marketing Pitch
 
-> *"NCQA certifies that the measure logic is correct. NCQA's Digital Content Services explicitly does not validate your data mapping or accuracy. DQAR fills that gap — validating the five semantic layers between your raw payer data and your CQL engine, and assessing the MDM maturity, metadata management capability, and data governance policies that determine whether your data quality is sustainable across measure years. Without both, you have a precisely executed calculation on ungoverned inputs."*
+> *"NCQA certifies that the measure logic is correct. NCQA's Digital Content Services explicitly does not validate your data mapping or accuracy. DQAR fills that gap — validating the five semantic layers between your raw payer data and your CQL engine, and assessing the MDM maturity, metadata management capability, and data governance policies that determine whether your data quality is sustainable across measurement periods. Without both, you have a precisely executed calculation on ungoverned inputs."*
 
 **Source:** NCQA Digital Content Services Customer Handbook (April 2025): *"Successful Implementation confirms that Licensee successfully installed the Digital Content Services Application or Licensee Engine, and the Measures. It does not confirm the Licensee's data mapping, data accuracy or implementation of the NCQA FHIR IG."*
 
@@ -40,21 +49,21 @@ This is not a weakness in NCQA DCS — it is a deliberate scope boundary. NCQA i
 
 ## The Three-Tier Findings Structure
 
-Every DQAR engagement produces findings organized into three tiers. This is the competitive differentiator — no certified HEDIS auditor produces all three.
+Every DQAR engagement produces findings organized into three tiers. This structure reflects Indicina's assessment scope — broader, more technical, and more forward-looking than a HEDIS compliance audit. A certified HEDIS auditor produces a compliance checklist against NCQA Vol. 5. DQAR produces a governance maturity assessment, a data quality analysis, and a digital readiness roadmap — three distinct outputs that together answer questions the NCQA audit was never designed to address.
 
 | Tier | Name | Definition | Example |
 |---|---|---|---|
-| 1 | Compliance gap | Deviation from current Vol. 5 audit standards | ETL rule modified post-lock with no change record |
-| 2 | Measure data gap | Data quality failure affecting measure rates | Value set binding using retired NDC codes in 3 drug measures |
-| 3 | Digital readiness gap | Capability gap relative to MY2029 ECDS mandatory reporting | No AuditEvent logging on FHIR server; lineage graph terminates at lakehouse boundary |
+| 1 | Governance gap | A failure in data governance capability — change control, MDM, metadata management, or data operations — that has produced or will produce measure rate impact. Root cause is organizational. | No change control process for value set bindings — retired codes active for two measurement periods undetected; ETL rule modified post-lock with no documented approval |
+| 2 | Measure data gap | A data quality failure directly affecting measure rates now — wrong codes, wrong resources, wrong clinical context, broken lineage hop. Root cause is technical and correctable. | LOINC mapped incorrectly for HbA1c — CDC numerator members silently excluded; Encounter.type constraint missing — CBP denominator inflated |
+| 3 | Digital readiness gap | A capability gap relative to MP2029 ECDS mandatory reporting or CMS-0057-F P2P requirements. Not failing today — will fail the MP2029 transition without remediation. | No AuditEvent logging on FHIR server; lineage graph terminates at lakehouse boundary; no provenance metadata on clinical resources |
 
-Tier 3 findings are invisible to the current HEDIS audit. They represent the DQAR's primary competitive moat.
+**Tier 1 is the governance dimension.** A plan can fix a Tier 2 finding — patch the ETL rule, update the value set — and leave the Tier 1 governance failure untouched, producing the same class of error next measurement period. The three-tier structure forces both the technical problem and its governance root cause into every finding. That is what a CDO needs to remediate structurally, not just seasonally.
 
-Every finding carries two dimensions:
+**Tier 3 is the competitive moat.** Invisible to the NCQA audit because that framework does not assess MP2029 readiness. A plan can pass their NCQA audit with a clean bill of health and carry a full slate of Tier 3 findings that will cause them to fail the MP2029 ECDS transition.
+
+Every finding carries two dimensions regardless of tier:
 - **Technical severity** — what is broken now and what is the measure rate impact
 - **Governance root cause** — why it broke and whether the organization has the capability to prevent recurrence
-
-Without the governance dimension, findings produce one-time fixes. With it, findings produce structural remediations — which is what a CDO needs.
 
 ---
 
@@ -65,15 +74,15 @@ Without the governance dimension, findings produce one-time fixes. With it, find
 Assesses what the data *is* right now. Point-in-time. Executable against a Bulk FHIR extract in the Aidbox assessment sandbox.
 
 **Level 1 — Terminology conformance**
-Is the code in the correct NCQA-published value set for the correct measurement year?
+Is the code in the correct NCQA-published value set for the correct measurement period?
 - Tool: Termbox + VSD conformance testing
 - Answers: "is this code valid for this measure?"
 - Does NOT answer: "is this code being used correctly in this clinical context?"
 
 **Level 2 — Resource structural conformance**
-Is the FHIR resource correctly structured per US Core and QI Core profiles? Is the code in the right field?
+Does the FHIR resource conform to US Core and QI Core profiles? Is the code in the right field?
 - Tool: HAPI FHIR Validator
-- Answers: "is this resource well-formed per the IG?"
+- Answers: "does this resource conform to the IG?"
 - Does NOT answer: "does this resource represent the right clinical event for this measure?"
 
 **Level 3 — Context conformance** (measure logic awareness required)
@@ -126,7 +135,7 @@ Is there a data governance function — council, CDO, or equivalent — with aut
 
 Are there documented data quality SLAs for HEDIS-relevant data feeds? Vendor contractual obligations for conformant LOINC codes, latency SLAs for EHR feeds?
 
-Is there a year-round change control process for ETL rules, value set bindings, and measure logic? Absence of post-lock change documentation is a common Vol. 5 finding — the deeper problem is absence of year-round change governance.
+Is there a year-round change control process for ETL rules, value set bindings, and measure logic? Absence of post-lock change documentation reflects a deeper governance failure — the absence of year-round change governance. DQAR assesses the governance capability, not just the audit-season artifact.
 
 **Maturity Rubric — DAMA-DMBOK Anchored, CMMI-DMM Structured**
 
@@ -140,11 +149,11 @@ Five DAMA-DMBOK knowledge areas assessed per engagement:
 |---|---|---|
 | 1 — Initial | Ad hoc — no documented processes, tribal knowledge | Most plans at score 1 on metadata, many at 1 on MDM |
 | 2 — Repeatable | Reactive — processes exist for some areas, not enterprise-governed | Common for governance where HEDIS team has processes but no CDO authority |
-| 3 — Defined | Governed — documented, standardized, applied consistently across HEDIS pipeline | MY2029 readiness floor |
+| 3 — Defined | Governed — documented, standardized, applied consistently across HEDIS pipeline | MP2029 readiness floor |
 | 4 — Managed | Measured — quality metrics tracked, SLAs in place, vendor accountability | Where leading payers with strong CDO functions are |
 | 5 — Optimizing | Continuous improvement — quality embedded in pipeline, automated monitoring | Future state — UC2 monitoring service enables this level |
 
-Most plans assessed will score 1–2 across MDM and metadata, 2–3 on governance. Level 3 is the MY2029 readiness floor. The UC2 monitoring subscription tracks maturity progression toward Level 3 each quarter.
+Most plans assessed will score 1–2 across MDM and metadata, 2–3 on governance. Level 3 is the MP2029 readiness floor. The UC2 monitoring subscription tracks maturity progression toward Level 3 each quarter.
 
 **Note:** DAMA-DMBOK reference slides will be uploaded to the DQAR Shared KB project to anchor rubric development. Do not author the detailed rubric until DAMA materials are available in the project KB.
 
@@ -153,21 +162,21 @@ Most plans assessed will score 1–2 across MDM and metadata, 2–3 on governanc
 ## The Six DQAR Audit Domains
 
 ### Domain 1 — IS Assessment
-Evaluates payer information system capabilities: system inventory, EDI transaction handling, FHIR server provenance, access controls, and change management. The current Vol. 5 IS Assessment accepts narrative descriptions and staff interviews. The DQAR requires machine-readable artifacts.
+Evaluates payer information system capabilities: system inventory, EDI transaction handling, FHIR server provenance, access controls, and change management. The NCQA IS Assessment accepts narrative descriptions and staff interviews. DQAR requires machine-readable artifacts — a materially higher and more defensible standard.
 
 ### Domain 2 — Value Set Conformance and Currency
 Highest-yield domain. Most plans have stale value set bindings. Key procedures:
-- VSD currency check against NCQA MY2025 (369 value sets, 179,831 codes, 15 code systems)
+- VSD currency check against NCQA MP2025 (369 value sets, 179,831 codes, 15 code systems)
 - NDC Medication List Directory currency
 - SNOMED/LOINC/ICD-10 cross-mapping audit (Level 1–3 combined)
-- Terminology drift detection (MY2024 → MY2025 retirements)
+- Terminology drift detection (MP2024 → MP2025 retirements)
 
 **VSD conformance template — three modes:**
 - Mode 1: API reference — client's Termbox/FHIR terminology server, Indicina read-only scoped access
 - Mode 2: Client-provided export — client's licensed VSD loaded to assessment sandbox, deleted at engagement close per SOW
 - Mode 3: JSON value sets from client's dQM package — FHIR ValueSet resources included in licensed DCS package, loaded directly to Termbox; covers ECDS measures only; no Excel parsing required
 
-**NCQA DCS JSON value sets:** For the 19 ECDS-eligible MY2025 measures, NCQA distributes value sets as JSON FHIR ValueSet resources within the dQM package. Pricing not publicly listed — contact NCQA Account Executive. The dQM Evaluation Package is likely the appropriate tier for assessment/testing purposes.
+**NCQA DCS JSON value sets:** For the 19 ECDS-eligible MP2025 measures, NCQA distributes value sets as JSON FHIR ValueSet resources within the dQM package. Pricing not publicly listed — contact NCQA Account Executive. The dQM Evaluation Package is likely the appropriate tier for assessment/testing purposes.
 
 ### Domain 3 — Data Lineage Tracing
 For each HEDIS measure:
@@ -207,30 +216,33 @@ Forward-looking domain:
 
 | Milestone | Detail | Source |
 |---|---|---|
-| MY2025 | 19 HEDIS measures reportable via ECDS | NCQA Vol. 2 MY2025 |
-| MY2026 | SSoR reporting no longer required for ECDS; NCQA exploring provenance evaluation methods | NCQA KB (verify against current Vol. 2) |
-| MY2029 | All Hybrid-method measures transition to ECDS mandatory reporting | NCQA Vol. 2 MY2025 |
+| MP2025 | 19 HEDIS measures reportable via ECDS | NCQA Vol. 2 MP2025 |
+| MP2026 | SSoR reporting no longer required for ECDS; NCQA exploring provenance evaluation methods | NCQA KB (verify against current Vol. 2) |
+| MP2029 | All Hybrid-method measures transition to ECDS mandatory reporting | NCQA Vol. 2 MP2025 |
 | Jan 1, 2027 | CMS-0057-F: Patient Access, Provider Access, Payer-to-Payer APIs required | CMS Final Rule |
 
-**Note:** MY2026 and MY2029 milestones sourced from prior Claude session — verify against current NCQA Vol. 2 MY2025 before client-facing use.
+**Note:** MP2026 and MP2029 milestones sourced from prior Claude session — verify against current NCQA Vol. 2 MP2025 before client-facing use.
 
 ---
 
 ## AuditEvent Provenance Architecture
 
 ### The Minimum Viable Provenance Pattern
-Extend the standard FHIR AuditEvent at ingest time with four fields. Written once per resource, at write time, by the pipeline.
+Extend the standard FHIR AuditEvent at ingest time with seven fields. Written once per resource, at write time, by the pipeline.
 
 ```json
 "extension": [
-  { "url": "http://indicina.com/fhir/ext/source-type", "valueCode": "ehr-clinical" },
+  { "url": "http://indicina.com/fhir/ext/source-type", "valueCode": "clinical_ehr" },
   { "url": "http://indicina.com/fhir/ext/source-system-id", "valueString": "epic-prod-org-447" },
   { "url": "http://indicina.com/fhir/ext/hedis-source-declaration", "valueCode": "ecds-ehr" },
-  { "url": "http://indicina.com/fhir/ext/ingest-pipeline-id", "valueString": "interbox-job-20251014-ehr-001" }
+  { "url": "http://indicina.com/fhir/ext/ingest-pipeline-id", "valueString": "dqar-20251014-001/epic-prod-org-447/Condition.ndjson-chunk-003" },
+  { "url": "http://indicina.com/fhir/ext/source-feed-id", "valueString": "epic-prod-org-447" },
+  { "url": "http://indicina.com/fhir/ext/source-inference-confidence", "valueCode": "asserted" },
+  { "url": "http://indicina.com/fhir/ext/ecds-ssor", "valueCode": "EHR/PHR" }
 ]
 ```
 
-`hedis-source-declaration` maps to ECDS source type vocabulary: `ecds-ehr`, `ecds-administrative`, `ecds-lab`, `ecds-pharmacy`.
+`hedis-source-declaration` (EXT 3) and `ecds-ssor` (EXT 7) are both derived from `source-type` via deterministic mapping rules defined in `dqar-05-source-inference-algorithm.md`. Full vocabulary: `ecds-ehr`, `ecds-administrative`, `ecds-lab`, `ecds-pharmacy`, `ecds-p2p`, `ecds-unknown`.
 
 ### Measure Attribution Join
 ```
@@ -241,11 +253,78 @@ member flag → resource ID → AuditEvent.entity.reference → hedis-source-dec
 - ✅ Closes HIPAA audit control gap (45 CFR §164.312(b))
 - ✅ Establishes FHIR server transaction log baseline
 - ✅ Provides write-time source attribution for ingest pipeline resources
+- ✅ Enables automated risk stratification by source feed — no manual inventory reconstruction
 - ❌ Not a current CMS or NCQA mandate
 - ❌ Does not automatically provide measure-level execution provenance
 - ❌ Does not cover resources created outside the managed ingest pipeline
 
-**Regulatory status:** No specific CMS or NCQA mandate requires AuditEvent logging today. Position as Digital Readiness Gap (Tier 3), not Compliance Gap (Tier 1).
+**Regulatory status:** No specific CMS or NCQA mandate requires AuditEvent logging today. Position as Digital Readiness Gap (Tier 3), not Governance Gap (Tier 1).
+
+---
+
+### Upstream Migration of AuditEvent Metadata — The Advisory Opportunity
+
+The DQAR sandbox demonstrates AuditEvent metadata capture at Aidbox ingest time (Stage 3 of the UC1 pipeline). This is the starting point — not the end state.
+
+**The advisory insight:** With Indicina guidance, and using the Aidbox AuditEvent ingest demo as proof of concept, plans can migrate the metadata capture point progressively upstream — from the Indicina sandbox to the plan's own FHIR infrastructure, and ultimately to the plan's FHIR vendor API bulk ingestion point. This means:
+
+```
+Stage 1 (demo / Rung 2):
+  Indicina Aidbox sandbox captures AuditEvent metadata
+  at anonymized extract load time
+  → Proves the pattern, demonstrates the SQL risk stratification query
+
+Stage 2 (Rung 3 — plan's own Aidbox):
+  Plan's Aidbox instance captures AuditEvent metadata
+  at production ingest time
+  → Lineage metadata lives in the plan's own infrastructure
+  → Risk stratification runs against production data, not a sandbox copy
+
+Stage 3 (Rung 4 — upstream to FHIR vendor API):
+  AuditEvent metadata captured at the plan's Bulk FHIR
+  $export / ingest API boundary — the earliest possible point
+  → Every resource tagged with source-system-id and source-type
+    before it ever reaches the measure calculation layer
+  → Lineage is native to the pipeline, not retrofitted
+  → Upstream errors caught earliest — lowest remediation cost
+```
+
+The upstream migration path is an Indicina advisory deliverable — it is not something Health Samurai sells directly, and it is not something a plan's internal team can navigate without guidance on the AuditEvent extension pattern and the FHIR Bulk Data API interaction points. This is a concrete, multi-engagement advisory thread that grows naturally from the UC1 sandbox demonstration.
+
+---
+
+### Velox Metadata Integration — Data Source Inventory Push/Pull
+
+The AuditEvent seven-extension metadata captured at ingest has a natural integration point with the Velox data source inventory. Velox's platform-side view of a plan's data sources is more useful when it reflects the actual per-feed resource counts, source types, and HEDIS source declarations that the AuditEvent metadata tracks.
+
+**Two integration directions are viable:**
+
+**Push — Aidbox → Velox:**
+After each ingest run, a lightweight export of the AuditEvent metadata summary (per `source-system-id`: resource type counts, source type distribution, hedis-source-declaration breakdown) is pushed to the Velox data source inventory. Velox business users see a live, queryable inventory of what's in the FHIR pipeline — attributed by feed — without needing SQL access to Aidbox.
+
+```
+Aidbox AuditEvent metadata (per feed summary)
+    → scheduled export job
+        → Velox data source inventory API
+            → Velox business user dashboard: "EHR feed epic-prod-org-447
+               contributed 142,847 Condition resources tagged ecds-ehr
+               last updated 2025-10-14"
+```
+
+**Pull — Velox → Aidbox:**
+Velox's existing data source inventory (which the plan may already maintain for other purposes) is used to pre-populate the feed manifest at UC1 engagement kickoff. Rather than constructing the feed manifest from scratch via interviews, Indicina pulls the Velox inventory as the starting point and validates/enriches it against the AuditEvent metadata after ingest.
+
+```
+Velox data source inventory
+    → feed manifest draft (Indicina kickoff)
+        → validated and enriched by AuditEvent metadata post-ingest
+            → gap between Velox inventory and actual AuditEvent feeds
+              = undeclared source finding (Domain 1 / Domain 3)
+```
+
+**The partnership value:** This integration makes the Velox inventory self-correcting over time — it reflects what is actually flowing through the FHIR pipeline, not just what was documented in a spreadsheet during the last IS assessment. For Velox, this is a concrete differentiator: their data source inventory is live and pipeline-sourced, not static. For Indicina, the Velox inventory becomes a pre-populated starting point for every new engagement — reducing kickoff effort and surfacing undeclared sources faster.
+
+**Confirm with Velox:** API availability for data source inventory write (push path) and read (pull path). Priority integration to propose in partnership discussions.
 
 ---
 
@@ -279,6 +358,151 @@ UCare (Minnesota) absorbed a ~20% enrollment increase of displaced UnitedHealthc
 
 ---
 
+## The Incumbent HEDIS Vendor Trap — Strategic Competitive Context
+
+This is one of the most important conversations in a DQAR engagement. Many plans are seriously considering staying with their existing HEDIS vendor — Inovalon, Cotiviti, Arcadia, or equivalent — rather than building toward FHIR-native infrastructure. The DQAR assessment creates a natural decision point, and Indicina must be prepared to make the case clearly.
+
+### What Incumbents Are Offering Now
+
+The major HEDIS ETL and measure reporting vendors have responded to the MP2029 ECDS mandate by adding digital quality reporting engines to their existing platforms. The pitch to plans is: *"You don't have to change anything. We'll handle the FHIR layer for you, just as we handled your ETL."*
+
+This sounds low-risk. It is not.
+
+### The Hidden Cost Structure of Staying
+
+**1. ETL and MRR fees continue — possibly increase**
+
+Plans using Inovalon, Cotiviti, or similar vendors pay for:
+- Annual ETL customization to accommodate NCQA measurement period changes
+- Measure rate reporting (MRR) production and submission services
+- Medical record retrieval (MRR) coordination and chase workflows
+- Chart abstraction and hybrid oversample management
+
+These fees are typically $2–6M+ annually for a mid-sized MA or commercial plan. Adding a digital reporting engine on top does not replace this cost structure — it adds to it. The vendor gains a new revenue stream on the ECDS migration while the legacy services remain billable.
+
+Critically: **each HEDIS measure run is a vendor-billed event.** Plans pay per run — for validation runs, parallel testing runs, remediation verification runs, and the final submission run. Running HEDIS measures internally against a plan-owned Aidbox instance with SQL on FHIR queries has no per-run cost beyond infrastructure. The per-run fee model is one of the most underappreciated cost drivers in the incumbent vendor relationship, and one of the clearest ROI arguments for the in-house path.
+
+**2. Lineage visibility disappears at the vendor ETL handoff**
+
+When a plan's data crosses into the HEDIS vendor's ETL pipeline, the plan loses visibility and control. Every transformation hop from that point forward — source normalization, code mapping, measure logic application, ISR/IDR production — happens inside the vendor's black box. The plan receives outputs. It does not receive lineage.
+
+This means:
+- The plan cannot trace a member's measure flag back to its originating source record through the vendor's transformations
+- When a measure rate changes unexpectedly, the plan cannot determine whether the change originated in their source data or in the vendor's ETL logic
+- The vendor's change control process is opaque — undocumented ETL changes after measure lock are a known audit risk that the plan cannot independently monitor
+- DQAR Domain 3 (data lineage) findings are the plan's liability, but the evidence lives at the vendor
+
+In contrast, the Indicina + Health Samurai architecture instruments lineage at every hop — from source system through Interbox integration through Aidbox ingest with AuditEvent metadata. The plan owns every lineage artifact. The risk stratification matrix is a query, not a vendor inquiry.
+
+**3. CQL engine lock-in by stealth**
+
+Incumbent vendors bundle their proprietary CQL execution engine with their digital reporting service. The plan's FHIR data becomes queryable only through that vendor's measure packages. When Medical Society measures arrive — or when the plan wants to run population health analytics beyond HEDIS — they have no pathway. The CQL engine the vendor controls becomes the bottleneck for every future quality use case.
+
+**4. No independent auditability**
+
+When the HEDIS vendor both produces the data and runs the measure calculation, there is no independent verification layer. NCQA DCS explicitly disclaims data mapping validation. The vendor's quality engine certifies itself. This is the same structural conflict of interest that exists in the certified auditor relationship — the plan has no independent view of whether their measure rates are defensible.
+
+### What In-House FHIR with Indicina + Health Samurai Provides Instead
+
+| Dimension | Incumbent HEDIS vendor | Indicina + Health Samurai path |
+|---|---|---|
+| FHIR infrastructure ownership | Vendor-hosted, plan has limited access | Plan-owned or plan-controlled Aidbox instance |
+| ETL costs | Annual recurring, often opaque pricing | One-time implementation, plan-controlled thereafter |
+| Per-HEDIS-run cost | Billed per run — validation, parallel testing, remediation, submission all cost | No per-run cost against plan-owned infrastructure |
+| Measure reporting | Vendor produces ISR/IDR | Plan runs SQL on FHIR queries; Indicina validates |
+| Data lineage visibility | Terminates at vendor ETL handoff — plan cannot trace beyond that boundary | End-to-end lineage from source system through Aidbox ingest; AuditEvent metadata at every hop |
+| Lineage traceability point | Downstream of vendor ETL — too late for early error detection | Moves upstream to plan's own FHIR API bulk ingestion point with Indicina advisory |
+| CQL engine | Vendor-proprietary, locked | Engine-agnostic; plan points data at any FHIR-capable CQL runtime |
+| Data governance | Vendor-managed, plan visibility limited | Plan-owned; Indicina assesses and advises governance maturity |
+| Independent validation | None — vendor validates itself | DQAR assessment provides independent semantic validation layer |
+| Medical Society measures | Dependent on vendor roadmap | Plan can adopt any new CQL measure package independently |
+| Long-term cost trajectory | Increases with measure complexity and run volume | Decreases as plan matures toward in-house capability |
+| P2P exchange readiness | Vendor handles ingest — quality unknown | UC3 assessment validates incoming data before it enters the pipeline |
+
+### The DQAR Assessment as a Migration Decision Tool
+
+The DQAR UC1 assessment is structured to produce exactly the evidence a CDO needs to make this build-vs-buy decision:
+
+- **Tier 3 findings** (Digital Readiness Gaps) document what the current vendor's FHIR implementation is missing — AuditEvent logging, US Core conformance, provenance metadata. These findings quantify the governance debt the plan is accumulating by staying.
+- **Level 6 governance assessment** documents where plan-side capability currently sits. If the plan has no internal FHIR engineering capability, the roadmap names what must be built and in what sequence.
+- **The remediation roadmap** provides a sequenced migration path away from incumbent vendor dependency, timed against MP2029 milestones and the Jan 1, 2027 P2P deadline.
+
+**The pitch to a plan considering staying with Inovalon or Cotiviti:**
+
+*"Your vendor is offering to manage your FHIR migration — which means your FHIR infrastructure, your data governance, and your CQL engine will live at the vendor, not at your plan. You will pay ETL fees and MRR fees and now a digital reporting fee, and you will have less visibility into your own data than you have today. A DQAR assessment costs a fraction of one year's vendor fees and tells you exactly what you need to build to own your own pipeline. The Health Samurai implementation that follows is a one-time investment in infrastructure you control. At $4K/month for ongoing advisory, you replace a multimillion-dollar annual vendor dependency with a cost-effective alternative that gives you more control, better reporting, higher QA efficiency, and a platform that can handle Medical Society measures, P2P exchange quality, and anything else that arrives after MP2029."*
+
+### Target Replacement Path
+
+The DQAR assessment creates a qualified target implementation path:
+
+```
+Current state:    Inovalon / Cotiviti ETL + MRR + (new) digital reporting engine
+                      ↓  UC1 assessment identifies gaps and migration requirements
+Transition:       Aidbox (Health Samurai) as plan-controlled FHIR server
+                  Termbox for value set governance
+                  Interbox for HL7v2/C-CDA integration pipeline
+                  Velox for business user quality dashboard (plan-side)
+                  Indicina for ongoing assessment objectivity and advisory
+                      ↓  UC2 monitoring subscription through the migration
+Target state:     Plan-owned FHIR infrastructure
+                  Engine-agnostic CQL measure execution
+                  Independent DQAR validation layer
+                  Full P2P exchange readiness (UC3)
+                  Medical Society measure-ready
+```
+
+---
+
+## CQL Engine Agnosticism and Medical Society Measures
+
+### DQAR Is Measure-Framework Agnostic
+
+The DQAR five-level semantic validation methodology applies to any CQL-based measure consuming FHIR data. The five levels — terminology conformance, structural conformance, context conformance, clinical plausibility, population completeness — are requirements of the data, not of any specific measure framework. HEDIS is the initial focus because it has the regulatory urgency and the largest financial stakes. The methodology generalizes to any quality measure that executes against a FHIR data store.
+
+This is a significant long-term positioning statement: as Medical Society measures proliferate, Indicina is already positioned to assess readiness for them without framework-specific customization.
+
+### The Medical Society Measure Landscape
+
+The AMA, ACC (cardiology), ACS (oncology), ASN (nephrology), and other specialty societies are actively developing FHIR/CQL-based clinical quality measures outside the NCQA HEDIS framework. CMS is incorporating specialty society measures into value-based care contracts, and MA quality frameworks are likely to follow.
+
+For payers, this creates a structural problem that the incumbent vendor model cannot solve:
+
+- Each society publishes its own CQL library with its own value sets (typically through VSAC but with independent governance cycles)
+- Profile constraints may differ from HEDIS QI Core profiles
+- Measure update cadences do not align with the NCQA measurement period calendar
+- Plans cannot wait for incumbent vendors to add support — competitive advantage accrues to plans that can adopt new measures early
+
+### Engine-Agnostic Architecture Enables Multi-Measure Execution
+
+A plan with a well-governed FHIR server (Aidbox or otherwise) can point their data at multiple CQL engines simultaneously:
+
+```
+FHIR Data Store (plan-owned Aidbox)
+    ├── NCQA HEDIS dQMs      → NCQA-certified CQL engine or SQL on FHIR
+    ├── ACC cardiology        → ACC CQL library → any FHIR-capable CQL runtime
+    ├── ACS oncology          → ACS CQL library → same or different runtime
+    ├── CMS value-based care  → CMS CQL packages → plan's preferred runtime
+    └── Plan-custom measures  → plan-built SQL on FHIR ViewDefinitions
+```
+
+The FHIR server is the single source of truth. CQL engines are consumers. This decoupling is only possible when the plan owns the FHIR infrastructure — not when it lives at a HEDIS vendor.
+
+**The DQAR implication:** The UC2 monitoring subscription naturally extends to cover Medical Society measure conformance as those libraries mature. The same five-level validation methodology applies — just pointed at different value sets and profile constraints. Termbox's hybrid terminology architecture (local resolver for custom/HEDIS value sets, delegation to VSAC/NLM for standard terminologies) handles the multi-framework value set governance problem natively.
+
+### What Plans Should Ask Their HEDIS Vendor Right Now
+
+A DQAR engagement arms the plan's CDO with the right questions:
+
+1. *"When ACC publishes their cardiology CQL library, how quickly can we run it against our data? What does that cost?"*
+2. *"Can we query our FHIR data directly with our own SQL tools, independent of your reporting engine?"*
+3. *"What is your upgrade path when NCQA changes US Core profile requirements between MP2025 and MP2029?"*
+4. *"Who owns the AuditEvent provenance metadata on our FHIR resources — us or you?"*
+5. *"When the P2P exchange goes live in January, who validates that incoming data before it enters our pipeline?"*
+
+No incumbent HEDIS vendor has satisfactory answers to all five. The DQAR assessment surfaces exactly these gaps and provides the roadmap to address them.
+
+---
+
 ## Industry Pain Points (Strategic Context)
 
 - Annual HEDIS reporting requires "redundant, idiosyncratic, annual hard coding" of measures and manual chart abstractions
@@ -287,3 +511,6 @@ UCare (Minnesota) absorbed a ~20% enrollment increase of displaced UnitedHealthc
 - Plans eager for anything that makes their data defensible before an auditor arrives
 - Direct public criticism of HEDIS auditors suppressed by regulatory stakes (star ratings, CMS bonuses)
 - NCQA DCS explicitly disclaims data mapping and accuracy validation — the upstream gap is unowned and unaddressed in the current vendor landscape
+- **Incumbent HEDIS vendors are adding digital reporting engines that reproduce vendor dependency in FHIR clothing — plans risk paying more for less control**
+- **CQL engine lock-in by incumbent vendors blocks Medical Society measure adoption and limits analytics independence**
+- **Plans without in-house FHIR infrastructure cannot independently validate their own measure rates or P2P exchange data quality**

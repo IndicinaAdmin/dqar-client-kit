@@ -12,7 +12,7 @@ Certifying against Vol. 5 — the framework DQAR argues is inadequate — create
 **All use cases are advisory and consulting services, not certification services.**
 
 **The core value proposition:**
-NCQA certifies that the measure logic executes correctly. NCQA DCS explicitly does not validate data mapping or accuracy. DQAR fills that gap — validating the five semantic layers between raw payer data and the CQL engine, and assessing the MDM maturity, metadata management capability, and data governance policies that determine whether data quality is sustainable across measure years.
+NCQA certifies that the measure logic executes correctly. NCQA DCS explicitly does not validate data mapping or accuracy. DQAR fills that gap — validating the five semantic layers between raw payer data and the CQL engine, and assessing the MDM maturity, metadata management capability, and data governance policies that determine whether data quality is sustainable across measurement periods.
 
 *Someone else certifies the plumbing. Indicina certifies the water.*
 
@@ -24,7 +24,7 @@ NCQA certifies that the measure logic executes correctly. NCQA DCS explicitly do
 
 | # | Name | Buying trigger | Engagement type | Health Samurai |
 |---|---|---|---|---|
-| UC1 | Digital Measure Readiness Assessment | MY2029 ECDS cliff; plan doesn't know where they stand | Fixed-fee assessment | Aidbox, Termbox |
+| UC1 | Digital Measure Readiness Assessment | MP2029 ECDS cliff; plan doesn't know where they stand | Fixed-fee assessment | Aidbox, Termbox |
 | UC2 | Digital Quality Data Operations Monitoring | Plan wants continuous visibility into data quality drift | Recurring subscription | Aidbox, Termbox |
 | UC3 | Payer-to-Payer Data Exchange Quality | P2P exchange live or imminent; incoming data quality unknown | Fixed-fee assessment | Aidbox, Termbox |
 
@@ -32,8 +32,88 @@ NCQA certifies that the measure logic executes correctly. NCQA DCS explicitly do
 
 | # | Name | Rationale for deferral |
 |---|---|---|
-| — | Pre-Audit Digital Readiness Preparation | Requires deep Vol. 5 compliance knowledge and certified auditor ecosystem relationships not yet established. Phase 2 once UC1 generates client credibility. |
-| — | CMS Interoperability Compliance Readiness | Different buyer (CIO/technology vs. CDO/quality), different regulatory surface, Payerbox partner relationship not yet formalized. Phase 2 once Health Samurai partnership matures. |
+| — | Pre-Audit Digital Readiness Preparation | Deferred — not abandoned. Indicina's approach lets plans keep current vendor contracts and architectures in place. As DQAR assessments demonstrate more agile, affordable, and compliant workflows for FHIR and dQM, plans will see the case for full migration to Health Samurai — not just for Payerbox and CMS API compliance, but as the ideal digital quality measure reporting environment: reference PostgreSQL with data lineage embedded at ingestion, native measure attribution via AuditEvent, and engine-agnostic CQL execution. Pre-Audit Preparation becomes a natural Phase 2 service once that migration is underway. |
+| — | CMS Interoperability Compliance Readiness | Deferred — different buyer (CIO/technology vs. CDO/quality), different regulatory surface. Payerbox partnership with Health Samurai not yet formalized. Phase 2 once the HS partnership matures and UC3 P2P engagements establish the data quality foundation that CMS API compliance depends on. |
+
+---
+
+## Platform Ladder — The Staged Engagement Model
+
+This is the core commercial architecture of the DQAR engagement. The premise: plans need to validate before they commit. Their security and compliance teams need time to complete HIPAA and SOC2 due diligence on Health Samurai before PHI-adjacent infrastructure goes to contract. The ladder gives Indicina productive billable work at every stage while that process runs.
+
+**The governing principle:** Each rung of the ladder delivers real value on its own. A plan that never advances beyond Rung 1 still gets findings they can act on. The ladder is not a sales funnel — it is a use-case-driven expansion path where trust, compliance clearance, and plan maturity grow together.
+
+```
+RUNG 1 — Offline Conformance Testing (no PHI leaves the plan, no HS infrastructure required)
+  What runs:      Client-side conformance testing kit — Stage 1 (stage1a, stage1b, stage1c)
+                  Governance assessment interviews (Track B, Level 6)
+                  Feed manifest construction
+  What Indicina delivers:  Preliminary findings on structural and conformance gaps
+                           Level 6 governance maturity score
+                           Prioritized gap inventory
+  Cost:           Low fixed-fee or included in retainer
+  HS dependency:  None — plan's security team has not yet reviewed HS
+  PHI exposure:   Zero — all conformance testing runs on plan infrastructure
+  Who can remediate: Plan internal staff, Indicina advisory
+
+RUNG 2 — Anonymized Sandbox Assessment (anonymized data only, HS HIPAA/SOC2 review in parallel)
+  What runs:      PHI-redacted ndjson extract loaded to Aidbox sandbox
+                  AuditEvent six-extension ingest
+                  Termbox VSD conformance testing
+                  SQL on FHIR assessment queries (five measures)
+                  Risk stratification matrix from AuditEvent metadata
+  What Indicina delivers:  Full three-tier DQAR findings report
+                           Measure rate impact estimates
+                           Remediation roadmap sequenced against MP2029
+  Cost:           UC1 fixed-fee engagement
+  HS dependency:  Aidbox + Termbox in Indicina-managed sandbox
+                  Plan reviews HS HIPAA BAA and SOC2 report concurrently
+                  No plan-side HS contract required at this stage
+  PHI exposure:   Zero — anonymized extract only crosses to Indicina/HS sandbox
+  Who can remediate: Plan internal, Indicina, or HS staff per plan's choice
+
+RUNG 3 — Continuous Monitoring with Plan-Controlled Infrastructure (HS contract in place)
+  What runs:      UC2 monthly/quarterly monitoring cadence
+                  Termbox client-hosted or Indicina-sandbox per SOW
+                  VSD refresh validation at measurement period rollover
+                  Level 5 population anomaly detection
+  What Indicina delivers:  Quarterly digital quality scorecard
+                           Governance maturity progression tracking
+                           Drift alerts between scheduled reviews
+  Cost:           $4K/month retainer
+  HS dependency:  Aidbox and/or Termbox licensing — plan has completed
+                  HIPAA BAA and SOC2 review, contract in place
+  PHI exposure:   Managed under HS BAA — plan controls their own instance
+  Who can remediate: Plan internal, Indicina, or HS staff per plan's choice
+
+RUNG 4 — Full PHI Operational Mode (Path C — target state)
+  What changes:   No PHI redaction step. Bulk FHIR extract loads
+                  directly to plan's own Aidbox instance with full PHI.
+                  The conformance testing kit becomes the pre-ingest quality
+                  gate for real production operations, not assessment.
+                  AuditEvent metadata is permanent production lineage
+                  from day one — not a sandbox artifact.
+  What Indicina delivers:  Ongoing UC2 monitoring against plan's
+                           live Aidbox instance. Quarterly scorecard,
+                           drift detection, maturity progression.
+                           Assessment queries run on scheduled cadence.
+  Cost:           $4K/month retainer + HS Aidbox/Termbox licensing
+  HS dependency:  Plan has completed HIPAA BAA + SOC2 review.
+                  Aidbox contracted and in production.
+  PHI exposure:   Plan-owned Aidbox under plan's own BAA.
+                  Indicina accesses via governed query interface only.
+  Who can remediate: Plan internal, Indicina, or HS staff per plan's choice
+  
+  This is the destination the entire ladder is designed to reach.
+  The plan's FHIR infrastructure is now plan-controlled, lineage
+  is native and continuous, measure runs have no per-run vendor
+  cost, and Indicina provides independent ongoing validation
+  rather than a one-time assessment.
+```
+
+**The due diligence window is productive time, not dead time.** While the plan's security team reviews HS HIPAA attestations and SOC2 Type II report, Indicina is running Rung 1 and Rung 2 work. By the time compliance clearance arrives, the plan already has a full findings report, a remediation roadmap, and a governance maturity baseline. The HS contract unlocks the next layer — it is not the starting gate.
+
+**The Velox boundary on this ladder:** Velox operates on the plan-side business user layer and does not require PHI access. Velox can be introduced at Rung 2 or Rung 3 without waiting for Rung 4 full infrastructure — the Velox dashboard consumes findings outputs and quality scorecard data, not raw FHIR. The Rung 1 offline validation kit is embeddable in Velox's onboarding workflow as a complementary capability.
 
 ---
 
@@ -43,19 +123,22 @@ NCQA certifies that the measure logic executes correctly. NCQA DCS explicitly do
 
 **Pitch:** *"NCQA DCS certifies your engine runs correctly. We assess whether the data going into it is semantically trustworthy — the right codes, in the right resources, in the right clinical context, with plausible values, governed by processes that will keep them right next year."*
 
-**Buying trigger:** Plan leadership aware of MY2029 ECDS mandatory reporting deadline without a clear picture of current digital measure infrastructure gaps. Often triggered by new VP of Quality, CIO initiative, or vendor pitch surfacing the issue.
+**Buying trigger:** Plan leadership aware of MP2029 ECDS mandatory reporting deadline without a clear picture of current digital measure infrastructure gaps. Often triggered by new VP of Quality, CIO initiative, or vendor pitch surfacing the issue.
 
 **Buyer:** VP of Quality, Chief Data Officer, VP of Analytics.
 
-**Deliverable:** Three-tier DQAR findings report organized by semantic level and governance sub-domain. Each finding carries technical severity AND governance root cause AND DAMA-DMBOK-anchored maturity score. Prioritized remediation roadmap sequenced against MY2026 and MY2029 milestones.
+**Deliverable:** Three-tier DQAR findings report organized by semantic level and governance sub-domain. Each finding carries technical severity AND governance root cause AND DAMA-DMBOK-anchored maturity score. Prioritized remediation roadmap sequenced against MP2026 and MP2029 milestones.
+
+**Platform ladder entry point:** UC1 spans Rungs 1 and 2. Rung 1 (offline validation kit + governance interviews) can begin immediately with no vendor contracts. Rung 2 (Aidbox sandbox assessment) runs while plan security reviews HS documentation. Full findings report delivered at Rung 2 completion.
 
 **Engagement structure:**
 - Client provides feed manifest (engagement kickoff) declaring all source system feeds
 - Client provides anonymized Bulk FHIR export (ndjson via `$export`) + VSD access (Mode 1, 2, or 3)
-- Client runs Indicina-provided validation kit on own infrastructure — PHI never leaves client environment:
-  - Stage 1a: NDJSON structural validation
-  - Stage 1b: Resource conformance ($validate — base FHIR R4 + US Core 6.1.0, classified by layer)
-  - Stage 1c: Bulk FHIR API protocol conformance ($export async protocol + manifest)
+- Client runs Indicina-provided conformance testing kit on own infrastructure — PHI never leaves client environment:
+  - Stage 1: Bulk FHIR API conformance (live server test)
+  - Stage 2: ndjson structural conformance testing
+  - Stage 3a: Base FHIR R4 (v4.0.1) structural conformance testing
+  - Stage 3: US Core 6.1.0 profile conformance
 - Anonymized extract + three conformance reports delivered to Indicina
 - Indicina loads to Aidbox sandbox with AuditEvent + six extension metadata fields generated atomically
 - Level 6 governance assessment via structured interviews and documentation review
@@ -86,7 +169,7 @@ PIQI framework dimensions map directly to Domain 5 procedures: Usability → 834
 
 **What it is:** A recurring subscription service providing continuous DQAR conformance monitoring against the plan's FHIR pipeline. Runs Track A Levels 1–3 on a scheduled cadence, reassesses Level 6 governance maturity every six months, produces quarterly findings scorecard with drift detection and trending. Indicina sells the conformance testing methodology and monitoring cadence — the plan owns the terminology data and pipeline infrastructure.
 
-**Pitch:** *"Data quality is continuous. The audit is annual. By the time audit season reveals a value set drift or semantic failure, the problem has been affecting your rates for months. Continuous monitoring catches it in real time — and tracks your governance maturity improvement toward MY2029 readiness."*
+**Pitch:** *"Data quality is continuous. The audit is annual. By the time audit season reveals a value set drift or semantic failure, the problem has been affecting your rates for months. Continuous monitoring catches it in real time — and tracks your governance maturity improvement toward MP2029 readiness."*
 
 **Buying trigger:** One of three triggers:
 1. UC1 findings identified Level 6 governance gaps — plan wants ongoing monitoring during remediation
@@ -98,9 +181,9 @@ PIQI framework dimensions map directly to Domain 5 procedures: Usability → 834
 **Deliverable:** Quarterly digital quality scorecard:
 - RAG status per semantic level (1–5) and governance sub-domain
 - Drift detection — conformance changes since prior quarter
-- Maturity progression — DAMA-DMBOK-anchored score movement toward Level 3 (MY2029 floor)
+- Maturity progression — DAMA-DMBOK-anchored score movement toward Level 3 (MP2029 floor)
 - Anomaly alerts between scheduled reviews (Level 5 population coherence failures)
-- Annual VSD refresh validation at measurement year rollover
+- Annual VSD refresh validation at measurement period rollover
 
 **VSD model:** Client holds the NCQA license. Indicina holds the conformance test suite and monitoring methodology. Client runs Termbox instance or provides annual VSD export per SOW.
 
@@ -108,9 +191,9 @@ PIQI framework dimensions map directly to Domain 5 procedures: Usability → 834
 - Track A Levels 1–3: monthly automated conformance run
 - Track A Levels 4–5: quarterly (population-level anomaly detection requires sufficient volume)
 - Level 6 governance reassessment: semi-annual structured review
-- VSD currency check: at NCQA MY release + 30 days
+- VSD currency check: at NCQA measurement period release + 30 days
 
-**CMMI-DMM progression narrative:** The UC1 engagement establishes the baseline maturity scores per DAMA-DMBOK knowledge area. UC2 tracks movement up the five-level scale each quarter. Most plans assessed at 1–2 across MDM and metadata. Level 3 is the MY2029 readiness floor — UC2 provides the roadmap and evidence of progress.
+**CMMI-DMM progression narrative:** The UC1 engagement establishes the baseline maturity scores per DAMA-DMBOK knowledge area. UC2 tracks movement up the five-level scale each quarter. Most plans assessed at 1–2 across MDM and metadata. Level 3 is the MP2029 readiness floor — UC2 provides the roadmap and evidence of progress.
 
 **Revenue model:** Annual subscription. Most defensible recurring revenue — VSD changes every year, monitoring need is continuous, maturity improvement is multi-year. Requires prior UC1 engagement as baseline.
 
@@ -139,7 +222,7 @@ PIQI framework dimensions map directly to Domain 5 procedures: Usability → 834
 P2P data received under CMS-0057-F arrives in a three-layer format stack:
 
 **Layer 1 — Transport: Bulk FHIR (mandatory)**
-Bulk Payer-to-Payer exchange SHALL use FHIR Bulk Data Access IG STU2 (2.0.0) asynchronous semantics. Same ndjson transport as UC1. Stage 1a structural validation and Stage 1c protocol conformance checks apply.
+Bulk Payer-to-Payer exchange SHALL use FHIR Bulk Data Access IG STU2 (2.0.0) asynchronous semantics. Same ndjson transport as UC1. Stage 1 Bulk FHIR API conformance testing applies.
 
 **Layer 2 — Content: US Core 3.1.1 OR 6.1.0 (both possible)**
 CMS-0057-F requires support for USCDI v1 (US Core 3.1.1) and USCDI v3 (US Core 6.1.0). A sending payer on the original CMS-9115 (2021) implementation may be sending 3.1.1-vintage resources. A sending payer on a forward-compliant implementation sends 6.1.0. The receiving plan has no control over which version arrives.
@@ -168,12 +251,12 @@ This is the commercially defining insight for UC3. The version gap between US Co
 | `MedicationRequest.dosageInstruction` | Optional | MUST SUPPORT | Medication adherence measure gaps |
 | `Patient.race/ethnicity` | US Core extensions | USCDI v3 restructured elements | Demographic constraint application failures |
 
-**Three-pass validation for UC3:**
+**Three-pass conformance testing for UC3:**
 
 This is the methodology that makes UC3 findings actionable rather than a list of undifferentiated errors:
 
 ```
-Pass 1 — Base FHIR R4 structural validation
+Pass 1 — Base FHIR R4 structural conformance testing
   Errors = genuine structural failures
   Finding: Sending payer implementation quality problem
   Owner: Request retransmission / raise data quality SLA
@@ -198,14 +281,14 @@ Pass 3 — US Core 6.1.0 conformance
 | Pass 3 only | Version gap artifact | Implement receiving-plan normalization |
 | Pass 2 + 3 | Genuine data quality problem | Investigate regardless of version |
 
-**Version detection before validation:**
+**Version detection before conformance testing:**
 
 Before running passes, detect which US Core version each incoming feed is using:
 1. `meta.profile` declarations on resources — most reliable if populated
 2. `GET [sending-payer-base]/metadata` CapabilityStatement — query before bulk export, add version to feed manifest
 3. Structural fingerprinting — presence/absence of 6.1.0-specific MUST SUPPORT elements in a resource sample
 
-Grouping incoming resources by `source-feed-id` (AuditEvent extension) and detecting US Core version per feed turns a chaotic multi-sender validation problem into a structured per-sender quality assessment.
+Grouping incoming resources by `source-feed-id` (AuditEvent extension) and detecting US Core version per feed turns a chaotic multi-sender conformance testing problem into a structured per-sender quality assessment.
 
 ---
 
@@ -213,9 +296,9 @@ Grouping incoming resources by `source-feed-id` (AuditEvent extension) and detec
 
 **Incoming P2P data quality assessment** covering all five semantic levels applied to *received* data:
 
-- Stage 1a: NDJSON structural validation
-- Stage 1b: Resource conformance — three-pass version-aware ($validate: base FHIR R4 → US Core 3.1.1 → US Core 6.1.0 delta classification)
-- Stage 1c: Bulk FHIR API protocol conformance ($export async protocol + manifest)
+- Stage 1: Bulk FHIR API conformance (live server test)
+- Stage 2: ndjson structural conformance testing
+- Stage 3: Three-pass version-aware conformance (3.1.1 → 6.1.0 → delta classification)
 - Level 3: Measure context constraint validation against receiving plan's HEDIS measures
 - Level 4: Clinical plausibility of received data
 - Level 5: Population completeness — all expected members and historical records arriving?
@@ -236,8 +319,8 @@ Grouping incoming resources by `source-feed-id` (AuditEvent extension) and detec
 **Health Samurai role:** Aidbox as receiving FHIR server sandbox with Termbox validation on ingest. AuditEvent six-extension pattern applied — tag each received resource with P2P sending-plan feed ID at ingest.
 
 **Technical infrastructure:** Shares UC1 pipeline architecture with three additions:
-1. Dual-version US Core validation (3.1.1 and 6.1.0) with delta classification
-2. Da Vinci PDex profile validation as optional third pass
+1. Dual-version US Core conformance testing (3.1.1 and 6.1.0) with delta classification
+2. Da Vinci PDex profile conformance testing as optional third pass
 3. FHIR Consent resource validity check
 
 ---
@@ -247,28 +330,46 @@ Grouping incoming resources by `source-feed-id` (AuditEvent extension) and detec
 ### The Three-Phase Model
 
 **Phase 1 — Assessment (Indicina-led)**
-Fixed-fee. Vendor-neutral. DQAR framework applied. Three-tier findings report with semantic level breakdown, version-aware conformance classification (UC3), and DAMA-DMBOK-anchored governance maturity scores. No partner products required at this phase.
+Fixed-fee. Vendor-neutral. DQAR framework applied. Three-tier findings report with semantic level breakdown, version-aware conformance classification (UC3), and DAMA-DMBOK-anchored governance maturity scores. No partner products required at this phase. Indicina provides the validation services the plan does not have internal bandwidth to perform.
 
 **Phase 2 — Roadmap (Indicina-led)**
-Prioritized implementation roadmap sequenced against MY2026/MY2029 (UC1) or Jan 1 2027 (UC3). Partner products named — Aidbox, Termbox, Velox — with specific capability gap-to-solution mapping.
+Prioritized implementation roadmap sequenced against MP2026/MP2029 (UC1) or Jan 1 2027 (UC3). Partner products named — Aidbox, Termbox, Velox — with specific gap-to-solution mapping. Remediation path left to the plan's discretion.
 
-**Phase 3 — Implementation (partner-led, Indicina as advisor)**
-Health Samurai or other vendor leads. Indicina provides implementation advisory, integration oversight, parallel testing, and roadmap validation.
+**Phase 3 — Remediation (plan's choice of path)**
+Three options — the plan chooses based on internal capacity and urgency:
+
+| Path | Who does the work | Indicina role |
+|---|---|---|
+| Internal staff | Plan's own engineering and informatics teams | Findings report + roadmap; available for advisory questions |
+| Indicina staff | Indicina provides hands-on remediation advisory and implementation oversight | Active engagement; validates that each fix closes the finding |
+| Health Samurai staff | Health Samurai implements FHIR infrastructure gaps (Aidbox, Termbox, Interbox) | Independent validation that remediation closes the finding; ongoing advisory |
+
+All three paths are compatible with the $4K/month retainer — the retainer funds Indicina's ongoing validation role regardless of who does the implementation work.
 
 ### Revenue Progression
 
-| Phase | Indicina revenue | Health Samurai revenue |
-|---|---|---|
-| UC1 Assessment | Fixed-fee | None |
-| UC1 Roadmap | Fixed-fee | None |
-| UC1 Implementation | Advisory fee | Aidbox + Termbox licensing |
-| UC2 Monitoring subscription | Annual subscription | Termbox subscription |
-| UC3 Assessment | Fixed-fee | None |
-| UC3 → UC2 Monitoring | Annual subscription | Aidbox + Termbox subscription |
+| Phase | Indicina revenue | Health Samurai revenue | Velox revenue |
+|---|---|---|---|
+| UC1 Assessment | Fixed-fee | None | None |
+| UC1 Roadmap | Fixed-fee | None | None |
+| UC1 Implementation advisory | $4K/month retainer | Aidbox + Termbox licensing | Lineage tooling referral |
+| UC2 Monitoring subscription | $4K/month retainer | Termbox subscription | Lineage monitoring |
+| UC3 Assessment | Fixed-fee | None | None |
+| UC3 → UC2 Monitoring | $4K/month retainer | Aidbox + Termbox subscription | Feed lineage tooling |
 
-### Critical Role Separation
+**Ongoing retainer model ($4,000/month):** Assessment is not a one-time event. After the initial findings report, the retainer covers continuous monitoring, VSD refresh advisory, governance maturity progression tracking, implementation oversight, and access to Indicina's expert network and partner best practices. The retainer is the mechanism by which the Health Samurai and Velox relationships deepen over time — each quarter introduces additional platform capabilities as the plan's remediation matures.
 
-Indicina retains the advisory/audit role permanently. Implementation vendors are the implementation layer. Mixing these roles erodes audit credibility and creates conflict of interest.
+### Assessment Objectivity — The Commercial Logic
+
+Indicina is an audit readiness assessor and consultant — not a certified NCQA auditor. This distinction matters commercially: Indicina is not constrained by auditor independence rules, and can assess, advise on remediation, oversee implementation, and monitor continuously with the same client across multiple years. This is the foundation of the $4K/month ongoing engagement model.
+
+Assessment objectivity is preserved through structure, not role prohibition:
+
+1. **Assessment phase is vendor-neutral and fixed-fee.** Findings stand on their own before any partner product is named. The three-tier DQAR report is the deliverable — not a sales pitch for an implementation platform.
+2. **Partner products are named in the roadmap phase** after findings are documented, with specific gap-to-solution mapping. Health Samurai products are recommended where they are the right fit — not as a default.
+3. **Transparency with clients.** Health Samurai is a preferred FHIR infrastructure partner. Velox is a prospective partner for plan-side business user tooling and lineage. Clients know this. The assessment findings are independently defensible regardless of which implementation path the plan chooses.
+
+The goal is a growing partner ecosystem — Health Samurai for FHIR infrastructure and data engineering, Velox for plan-side business user platforms — where Indicina's assessment credibility creates qualified implementation referrals, and partner relationships deepen the engagement surface for clients.
 
 ---
 
@@ -285,10 +386,10 @@ Indicina retains the advisory/audit role permanently. Implementation vendors are
 | AuditEvent six extensions | Full | Scheduled | Full + sending-payer-id |
 | Source inference algorithm | Full | Scheduled | Full + version detection |
 | SQL on FHIR query library | Five measures | Scheduled | Five measures (incoming) |
-| Client validation kit | UC1 standard | Reused | UC3 three-pass version |
+| Client conformance testing kit | UC1 standard | Reused | UC3 three-pass version |
 | PIQI framework (Domain 5) | Full | Level 5 monthly | Full (incoming data) |
 | US Core version detection | 6.1.0 only | 6.1.0 drift | 3.1.1 + 6.1.0 + delta |
-| PDex profile validation | Not applicable | Not applicable | Optional third pass |
+| PDex profile conformance testing | Not applicable | Not applicable | Optional third pass |
 | Consent resource check | Not applicable | Not applicable | Required |
 
 ---
@@ -301,13 +402,13 @@ Indicina retains the advisory/audit role permanently. Implementation vendors are
 Framework critique, six domains, three-tier findings, five-level semantic validation, Level 6 DAMA-DMBOK maturity rubric, regulatory timeline, Health Samurai partner guide, inference algorithm, lineage studies methodology, PIQI Domain 5 integration, CMMI-DMM level structure. DAMA slides to be uploaded. No application code.
 
 **Project 2 — DQAR UC1 Assessment App** (Claude Code + Health Samurai)
-Eight-stage validation pipeline, Aidbox sandbox, SQL on FHIR library, AuditEvent six extensions, source inference, client validation kit, findings report generator. Primary spec: `dqar-06-uc1-app-technical-specification.md`.
+Eight-stage conformance testing and assessment pipeline, Aidbox sandbox, SQL on FHIR library, AuditEvent six extensions, source inference, client conformance testing kit, findings report generator. Primary spec: `dqar-06-uc1-app-technical-specification.md`.
 
 **Project 3 — DQAR UC2 Monitoring Service** (advisory + subscription product)
 Monitoring cadence design, drift detection methodology, quarterly scorecard format, DAMA-DMBOK maturity progression tracking, VSD refresh service design, subscription commercial model. Reuses UC1 app infrastructure on scheduled cadence.
 
 **Project 4 — DQAR UC3 P2P Exchange Quality** (advisory)
-P2P format stack (Bulk FHIR + US Core 3.1.1/6.1.0 + PDex), three-pass version-aware validation methodology, error classification table, version detection methodology, per-sender scorecard design, Consent validity check, UCare case study. Extends UC1 infrastructure with dual-version and PDex validation.
+P2P format stack (Bulk FHIR + US Core 3.1.1/6.1.0 + PDex), three-pass version-aware conformance testing methodology, error classification table, version detection methodology, per-sender scorecard design, Consent validity check, UCare case study. Extends UC1 infrastructure with dual-version and PDex conformance testing.
 
 ### Cross-project linkage
 
