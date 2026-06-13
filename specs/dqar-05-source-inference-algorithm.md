@@ -8,13 +8,14 @@
 
 When a client FHIR extract carries no `meta.source` URI and no Provenance resources, the UC1 ingest pipeline cannot directly read the originating source system type. This algorithm infers source-type and source-system-id from FHIR resource structure using signals that US Core 6.1.0 conformance requires to be present.
 
-**The inference result drives four AuditEvent extension fields:**
-- `http://indicina.com/fhir/ext/source-type`
-- `http://indicina.com/fhir/ext/source-system-id`
-- `http://indicina.com/fhir/ext/source-inference-confidence`
-- `http://indicina.com/fhir/ext/ecds-ssor` ← derived from source-type via SSoR mapping rule
+**The inference result drives five AuditEvent extension fields (EXT 1–2, 4–6):**
+- `http://indicina.com/fhir/ext/source-type` (EXT 1)
+- `http://indicina.com/fhir/ext/source-system-id` (EXT 2)
+- `http://indicina.com/fhir/ext/source-feed-id` (EXT 4)
+- `http://indicina.com/fhir/ext/source-inference-confidence` (EXT 5)
+- `http://indicina.com/fhir/ext/ecds-ssor` (EXT 6) ← derived from source-type via SSoR mapping rule
 
-**The `hedis-source-declaration` field (EXT 3) is also derived from source-type via direct vocabulary map — no independent inference required.**
+**EXT 3 (`ingest-pipeline-id`) and EXT 7 (`ol-run-id`) are set by the pipeline orchestrator at run time — not derived by this algorithm.** EXT 7 is the OpenLineage run ID UUID that links the AuditEvent to the lineage graph (Marquez/OpenMetadata); required for DQAR provenance maturity Level 3+.
 
 ---
 
@@ -32,6 +33,7 @@ The source-type vocabulary is layered into two tiers based on what the algorithm
 | `pharmacy_pbm` | PBM pharmacy dispensing | MedicationDispense (determinative); known PBM identifier system URIs |
 | `clinical_lab` | Laboratory results | Observation.category = `laboratory` (US Core MUST SUPPORT — not inference, a declaration) |
 | `payer_exchange` | P2P data from another payer | PDex meta.profile; Provenance with payer agent type; PDex-specific resource patterns |
+| `clinical_immunization_registry` | Immunization registry (IIS) data | `Immunization.primarySource = false` (US Core MUST SUPPORT field — false means data reported from another source, typically a state IIS) |
 
 ### Tier B — Manifest/meta.source declared only (structural signals cannot distinguish these)
 
@@ -66,36 +68,17 @@ SOURCE_TYPE_TO_SSOR = {
     'pharmacy_specialty':        'Administrative',
 
     # Clinical Registry/HIE
-    'clinical_lab':              'Clinical Registry/HIE',
-    'clinical_hie':              'Clinical Registry/HIE',
-    'clinical_registry':         'Clinical Registry/HIE',
+    'clinical_lab':                       'Clinical Registry/HIE',
+    'clinical_hie':                       'Clinical Registry/HIE',
+    'clinical_registry':                  'Clinical Registry/HIE',
+    'clinical_immunization_registry':     'Clinical Registry/HIE',
 
-    # Case Management/Disease Management
-    'case_management':           'Case Management/Disease Management',
-    'disease_management':        'Case Management/Disease Management',
+    # Case/Disease Mgmt
+    'case_management':           'Case/Disease Mgmt',
+    'disease_management':        'Case/Disease Mgmt',
 
     # Unresolvable — triggers finding
     'unknown':                    None,          # SSoR not attributable — Tier 1 governance finding
-}
-```
-
-## Vocabulary-to-HEDIS-Declaration Mapping Rule
-
-```python
-SOURCE_TYPE_TO_HEDIS = {
-    'clinical_ehr':              'ecds-ehr',
-    'clinical_phr':              'ecds-ehr',
-    'administrative_claims':     'ecds-administrative',
-    'administrative_encounter':  'ecds-administrative',
-    'pharmacy_pbm':              'ecds-pharmacy',
-    'pharmacy_specialty':        'ecds-pharmacy',
-    'clinical_lab':              'ecds-lab',
-    'clinical_hie':              'ecds-ehr',       # HIE-aggregated treated as EHR for HEDIS
-    'clinical_registry':         'ecds-ehr',       # Registry data treated as EHR for HEDIS
-    'case_management':           'ecds-ehr',       # Case management treated as EHR for HEDIS
-    'disease_management':        'ecds-ehr',       # Disease management treated as EHR for HEDIS
-    'payer_exchange':            'ecds-p2p',
-    'unknown':                   'ecds-unknown',
 }
 ```
 
@@ -208,12 +191,14 @@ Determinative resource types require no signal beyond `resourceType`. These are 
 
 ```python
 DETERMINATIVE_RESOURCE_TYPES = {
-    'ExplanationOfBenefit': ('administrative_claims',    'high'),
-    'Claim':                ('administrative_claims',    'high'),
-    'ClaimResponse':        ('administrative_claims',    'high'),
-    'Coverage':             ('administrative_claims',    'high'),
-    'MedicationDispense':   ('pharmacy_pbm',             'high'),  # refined to pharmacy_specialty
-                                                                    # at Priority 2 if meta.source present
+    'ExplanationOfBenefit': ('administrative_claims',          'high'),
+    'Claim':                ('administrative_claims',          'high'),
+    'ClaimResponse':        ('administrative_claims',          'high'),
+    'Coverage':             ('administrative_claims',          'high'),
+    'MedicationDispense':   ('pharmacy_pbm',                   'high'),  # refined to pharmacy_specialty
+                                                                          # at Priority 2 if meta.source present
+    'Immunization':         ('clinical_immunization_registry', 'high'),  # refined to clinical_ehr
+                                                                          # if primarySource=true/absent
 }
 
 def get_source_from_resource_type(resource):
@@ -230,6 +215,10 @@ def get_source_from_resource_type(resource):
                                   'walgreens-specialty', 'coram', 'bioscrip']
             if any(sig in sys for sys in id_systems for sig in specialty_signals):
                 source_type = 'pharmacy_specialty'
+        # Refine Immunization: primarySource=false → IIS registry; true or absent → EHR-captured
+        if rt == 'Immunization':
+            if resource.get('primarySource') is not False:
+                source_type = 'clinical_ehr'
         return {
             'source_type': source_type,
             'confidence': confidence,
@@ -484,8 +473,9 @@ def infer_source_metadata(resource, feed_manifest=None, cluster_registry=None):
     """
     Run inference priorities in order. Return first successful result.
     Always returns a dict with source_type, source_feed_id,
-    source_system_id, hedis_source_declaration, ecds_ssor,
-    confidence, and inference_basis.
+    source_system_id, ecds_ssor, confidence, and inference_basis.
+    EXT 3 (ingest-pipeline-id) and EXT 7 (ol-run-id) are set by
+    the pipeline orchestrator and are not part of this return dict.
     """
     if cluster_registry is None:
         cluster_registry = {}
@@ -524,40 +514,24 @@ def _build_result(resource, inferred):
     """
     Build complete AuditEvent extension metadata including:
     - source-type (expanded vocabulary)
-    - hedis-source-declaration (ECDS attribution code)
     - ecds-ssor (NCQA SSoR category)
     - source-inference-confidence
     """
-    SOURCE_TYPE_TO_HEDIS = {
-        'clinical_ehr':              'ecds-ehr',
-        'clinical_phr':              'ecds-ehr',
-        'administrative_claims':     'ecds-administrative',
-        'administrative_encounter':  'ecds-administrative',
-        'pharmacy_pbm':              'ecds-pharmacy',
-        'pharmacy_specialty':        'ecds-pharmacy',
-        'clinical_lab':              'ecds-lab',
-        'clinical_hie':              'ecds-ehr',
-        'clinical_registry':         'ecds-ehr',
-        'case_management':           'ecds-ehr',
-        'disease_management':        'ecds-ehr',
-        'payer_exchange':            'ecds-p2p',
-        'unknown':                   'ecds-unknown',
-    }
-
     SOURCE_TYPE_TO_SSOR = {
-        'clinical_ehr':              'EHR/PHR',
-        'clinical_phr':              'EHR/PHR',
-        'payer_exchange':            'EHR/PHR',
-        'administrative_claims':     'Administrative',
-        'administrative_encounter':  'Administrative',
-        'pharmacy_pbm':              'Administrative',
-        'pharmacy_specialty':        'Administrative',
-        'clinical_lab':              'Clinical Registry/HIE',
-        'clinical_hie':              'Clinical Registry/HIE',
-        'clinical_registry':         'Clinical Registry/HIE',
-        'case_management':           'Case Management/Disease Management',
-        'disease_management':        'Case Management/Disease Management',
-        'unknown':                    None,
+        'clinical_ehr':                       'EHR/PHR',
+        'clinical_phr':                       'EHR/PHR',
+        'payer_exchange':                     'EHR/PHR',
+        'administrative_claims':              'Administrative',
+        'administrative_encounter':           'Administrative',
+        'pharmacy_pbm':                       'Administrative',
+        'pharmacy_specialty':                 'Administrative',
+        'clinical_lab':                       'Clinical Registry/HIE',
+        'clinical_hie':                       'Clinical Registry/HIE',
+        'clinical_registry':                  'Clinical Registry/HIE',
+        'clinical_immunization_registry':     'Clinical Registry/HIE',
+        'case_management':                    'Case/Disease Mgmt',
+        'disease_management':                 'Case/Disease Mgmt',
+        'unknown':                             None,
     }
 
     source_type = inferred.get('source_type', 'unknown')
@@ -568,7 +542,6 @@ def _build_result(resource, inferred):
         'source_type':               source_type,
         'source_system_id':          sys_id,
         'source_feed_id':            feed_id,
-        'hedis_source_declaration':  SOURCE_TYPE_TO_HEDIS.get(source_type, 'ecds-unknown'),
         'ecds_ssor':                 SOURCE_TYPE_TO_SSOR.get(source_type),
         'confidence':                inferred.get('confidence', 'unknown'),
         'inference_basis':           inferred.get('inference_basis', 'none'),

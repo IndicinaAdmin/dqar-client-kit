@@ -58,7 +58,7 @@ RUNG 1 — Offline Conformance Testing (no PHI leaves the plan, no HS infrastruc
 
 RUNG 2 — Anonymized Sandbox Assessment (anonymized data only, HS HIPAA/SOC2 review in parallel)
   What runs:      PHI-redacted ndjson extract loaded to Aidbox sandbox
-                  AuditEvent six-extension ingest
+                  AuditEvent seven-extension ingest
                   Termbox VSD conformance testing
                   SQL on FHIR assessment queries (five measures)
                   Risk stratification matrix from AuditEvent metadata
@@ -140,7 +140,7 @@ RUNG 4 — Full PHI Operational Mode (Path C — target state)
   - Stage 3a: Base FHIR R4 (v4.0.1) structural conformance testing
   - Stage 3: US Core 6.1.0 profile conformance
 - Anonymized extract + three conformance reports delivered to Indicina
-- Indicina loads to Aidbox sandbox with AuditEvent + six extension metadata fields generated atomically
+- Indicina loads to Aidbox sandbox with AuditEvent + seven extension metadata fields generated atomically
 - Level 6 governance assessment via structured interviews and documentation review
 - Findings report and roadmap delivered
 
@@ -316,7 +316,7 @@ Grouping incoming resources by `source-feed-id` (AuditEvent extension) and detec
 
 **Revenue model:** Fixed-fee assessment. Evolves into UC2-style continuous monitoring on the P2P ingest pipeline as P2P exchange volume grows.
 
-**Health Samurai role:** Aidbox as receiving FHIR server sandbox with Termbox validation on ingest. AuditEvent six-extension pattern applied — tag each received resource with P2P sending-plan feed ID at ingest.
+**Health Samurai role:** Aidbox as receiving FHIR server sandbox with Termbox validation on ingest. AuditEvent seven-extension pattern applied — tag each received resource with P2P sending-plan feed ID at ingest.
 
 **Technical infrastructure:** Shares UC1 pipeline architecture with three additions:
 1. Dual-version US Core conformance testing (3.1.1 and 6.1.0) with delta classification
@@ -383,7 +383,7 @@ The goal is a growing partner ecosystem — Health Samurai for FHIR infrastructu
 | Feed manifest | Required | Ongoing maintenance | Required per sending payer |
 | Aidbox sandbox | Assessment | Monitoring | Assessment |
 | Termbox VSD | Mode 1/2/3 | Client-hosted / SOW | Mode 1/2/3 |
-| AuditEvent six extensions | Full | Scheduled | Full + sending-payer-id |
+| AuditEvent seven extensions | Full | Scheduled | Full + sending-payer-id |
 | Source inference algorithm | Full | Scheduled | Full + version detection |
 | SQL on FHIR query library | Five measures | Scheduled | Five measures (incoming) |
 | Client conformance testing kit | UC1 standard | Reused | UC3 three-pass version |
@@ -402,7 +402,7 @@ The goal is a growing partner ecosystem — Health Samurai for FHIR infrastructu
 Framework critique, six domains, three-tier findings, five-level semantic validation, Level 6 DAMA-DMBOK maturity rubric, regulatory timeline, Health Samurai partner guide, inference algorithm, lineage studies methodology, PIQI Domain 5 integration, CMMI-DMM level structure. DAMA slides to be uploaded. No application code.
 
 **Project 2 — DQAR UC1 Assessment App** (Claude Code + Health Samurai)
-Eight-stage conformance testing and assessment pipeline, Aidbox sandbox, SQL on FHIR library, AuditEvent six extensions, source inference, client conformance testing kit, findings report generator. Primary spec: `dqar-06-uc1-app-technical-specification.md`.
+Eight-stage conformance testing and assessment pipeline, Aidbox sandbox, SQL on FHIR library, AuditEvent seven extensions, source inference, client conformance testing kit, findings report generator. Primary spec: `dqar-06-uc1-app-technical-specification.md`.
 
 **Project 3 — DQAR UC2 Monitoring Service** (advisory + subscription product)
 Monitoring cadence design, drift detection methodology, quarterly scorecard format, DAMA-DMBOK maturity progression tracking, VSD refresh service design, subscription commercial model. Reuses UC1 app infrastructure on scheduled cadence.

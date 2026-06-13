@@ -234,19 +234,19 @@ Extend the standard FHIR AuditEvent at ingest time with seven fields. Written on
 "extension": [
   { "url": "http://indicina.com/fhir/ext/source-type", "valueCode": "clinical_ehr" },
   { "url": "http://indicina.com/fhir/ext/source-system-id", "valueString": "epic-prod-org-447" },
-  { "url": "http://indicina.com/fhir/ext/hedis-source-declaration", "valueCode": "ecds-ehr" },
   { "url": "http://indicina.com/fhir/ext/ingest-pipeline-id", "valueString": "dqar-20251014-001/epic-prod-org-447/Condition.ndjson-chunk-003" },
   { "url": "http://indicina.com/fhir/ext/source-feed-id", "valueString": "epic-prod-org-447" },
   { "url": "http://indicina.com/fhir/ext/source-inference-confidence", "valueCode": "asserted" },
-  { "url": "http://indicina.com/fhir/ext/ecds-ssor", "valueCode": "EHR/PHR" }
+  { "url": "http://indicina.com/fhir/ext/ecds-ssor", "valueCode": "EHR/PHR" },
+  { "url": "http://indicina.com/fhir/ext/ol-run-id", "valueString": "550e8400-e29b-41d4-a716-446655440000" }
 ]
 ```
 
-`hedis-source-declaration` (EXT 3) and `ecds-ssor` (EXT 7) are both derived from `source-type` via deterministic mapping rules defined in `dqar-05-source-inference-algorithm.md`. Full vocabulary: `ecds-ehr`, `ecds-administrative`, `ecds-lab`, `ecds-pharmacy`, `ecds-p2p`, `ecds-unknown`.
+`ecds-ssor` (EXT 6) is derived from `source-type` via deterministic SSoR mapping rule defined in `dqar-05-source-inference-algorithm.md`. Four-value NCQA vocabulary: `EHR/PHR` | `Administrative` | `Clinical Registry/HIE` | `Case/Disease Mgmt`. Null when source-type = `unknown` — triggers Tier 1 governance finding. `ol-run-id` (EXT 7) is a UUID v4 set by the pipeline orchestrator at ingest time; it is the join key to the OpenLineage lineage graph and required for DQAR provenance maturity Level 3+.
 
 ### Measure Attribution Join
 ```
-member flag → resource ID → AuditEvent.entity.reference → hedis-source-declaration + source-system-id
+member flag → resource ID → AuditEvent.entity.reference → ecds-ssor + source-system-id
 ```
 
 ### What AuditEvent Logging Is and Is Not
@@ -300,7 +300,7 @@ The AuditEvent seven-extension metadata captured at ingest has a natural integra
 **Two integration directions are viable:**
 
 **Push — Aidbox → Velox:**
-After each ingest run, a lightweight export of the AuditEvent metadata summary (per `source-system-id`: resource type counts, source type distribution, hedis-source-declaration breakdown) is pushed to the Velox data source inventory. Velox business users see a live, queryable inventory of what's in the FHIR pipeline — attributed by feed — without needing SQL access to Aidbox.
+After each ingest run, a lightweight export of the AuditEvent metadata summary (per `source-system-id`: resource type counts, source type distribution, ecds-ssor breakdown) is pushed to the Velox data source inventory. Velox business users see a live, queryable inventory of what's in the FHIR pipeline — attributed by feed — without needing SQL access to Aidbox.
 
 ```
 Aidbox AuditEvent metadata (per feed summary)
