@@ -23,11 +23,11 @@ CLIENT ENVIRONMENT (PHI present)
   Preflight:   CapabilityStatement check — server capability + resource inventory
                output: preflight-report.json
   Stage 1:     Client $export — US Core 6.1.0 ndjson
-  Stage 1a:    NDJSON structural validation
-               output: stage1a-report.json (no PHI)
-  Stage 1b:    Resource conformance ($validate — base FHIR R4 + US Core 6.1.0)
-               output: stage1b-{engagement}.json (no PHI)
-  Stage 1c:    Bulk FHIR API protocol conformance ($export async protocol + manifest)
+  Stage 1a:    Bulk FHIR API protocol conformance ($export async protocol + manifest)
+               output: stage1a-{engagement}.json (no PHI)
+  Stage 1b:    NDJSON structural validation
+               output: stage1b-report.json (no PHI)
+  Stage 1c:    Resource conformance ($validate — base FHIR R4 + US Core 6.1.0)
                output: stage1c-{engagement}.json (no PHI)
   Stage 3:     PHI redaction + anonymization
 
@@ -62,50 +62,50 @@ python packages/client-kit/preflight/preflight_check.py \
   --output preflight-report.json
 ```
 
-Checks that the target FHIR server declares all required US Core resource types and reports whether Bulk FHIR `$export` is supported. Output is read by Stage 1c to determine whether bulk export protocol testing applies.
+Checks that the target FHIR server declares all required US Core resource types and reports whether Bulk FHIR `$export` is supported. Output is read by Stage 1a to determine whether bulk export protocol testing applies.
 
-### Stage 1a — NDJSON structural validation
+### Stage 1a — Bulk FHIR API protocol conformance
 
 ```bash
-python packages/client-kit/validator/stage1a_ndjson_validator.py \
+python packages/client-kit/validator/stage1a_bulk_fhir_export_preflight.py \
+  --engagement config/engagements/{client}.json \
+  --preflight-report preflight-report.json \
+  --output data/stage1a-{engagement}.json
+```
+
+Tests the server's `$export` implementation against the SMART Bulk Data Access IG. Six checks: `capability_declares_export`, `kick_off_accepted` (202 response), `content_location_header`, `polling_completes`, `manifest_valid` (output array + requiresAccessToken), `output_content_type` (application/fhir+ndjson). Skipped automatically when preflight reports `bulk_export_supported: false`.
+
+### Stage 1b — NDJSON structural validation
+
+```bash
+python packages/client-kit/validator/stage1b_ndjson_validator.py \
   --ndjson-dir data/export \
-  --output data/stage1a-report.json
+  --output data/stage1b-report.json
 ```
 
 Five structural checks per `.ndjson` file: UTF-8 decodable, no empty files, all lines valid JSON, `resourceType` present on every record, filename stem matches declared resource type. Outputs aggregate counts only — no PHI in report.
 
-### Stage 1b — Resource conformance ($validate)
+### Stage 1c — Resource conformance ($validate)
 
 ```bash
-python packages/client-kit/validator/stage1b_fhir_uscore_validator.py \
+python packages/client-kit/validator/stage1c_fhir_uscore_validator.py \
   --engagement config/engagements/{client}.json \
   --ndjson-dir data/export \
-  --output data/stage1b-{engagement}.json
+  --output data/stage1c-{engagement}.json
 ```
 
 Posts each resource to the FHIR server's `/{ResourceType}/$validate` endpoint. Classifies returned OperationOutcome issues as `base-fhir` (core R4 constraint) or `us-core` (US Core 6.1.0 profile violation) by inspecting the `http://hl7.org/fhir/us/core` URL prefix in diagnostics and expression fields. Both base FHIR R4 and US Core conformance are assessed in a single pass — the engagement's server performs both validations and the response is classified accordingly.
 
 Run against multiple engagements to compare server behaviour on the same dataset.
 
-### Stage 1c — Bulk FHIR API protocol conformance
-
-```bash
-python packages/client-kit/validator/stage1c_bulk_fhir_export.py \
-  --engagement config/engagements/{client}.json \
-  --preflight-report preflight-report.json \
-  --output data/stage1c-{engagement}.json
-```
-
-Tests the server's `$export` implementation against the SMART Bulk Data Access IG. Six checks: `capability_declares_export`, `kick_off_accepted` (202 response), `content_location_header`, `polling_completes`, `manifest_valid` (output array + requiresAccessToken), `output_content_type` (application/fhir+ndjson). Skipped automatically when preflight reports `bulk_export_supported: false`.
-
 ### Conformance report format (delivered to Indicina — no PHI)
 
-Stage 1b report (one per engagement):
+Stage 1c report (one per engagement):
 
 ```json
 {
   "report_type": "fhir-validation",
-  "stage": "1b",
+  "stage": "1c",
   "generated_at": "2025-10-14T09:00:00Z",
   "engagement": "client-aidbox-prod",
   "server_type": "aidbox",

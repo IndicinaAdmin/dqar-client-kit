@@ -1,5 +1,5 @@
 """
-Stage 1a — NDJSON structural validator.
+Stage 1b — NDJSON structural validator.
 
 Checks (in order, stops per-file on UTF-8 failure):
   1. utf8_decodable        — file opens as UTF-8 without errors
@@ -9,7 +9,7 @@ Checks (in order, stops per-file on UTF-8 failure):
   5. filename_matches_type — resourceType values match the filename stem
                              (e.g. Patient.ndjson must contain only Patient resources)
 
-Output: data/stage1a-report.json — aggregate counts only, zero PHI.
+Output: data/stage1b-report.json — aggregate counts only, zero PHI.
 """
 
 import argparse
@@ -95,7 +95,7 @@ def check_file(ndjson_path: Path) -> dict:
 
 def run(
     ndjson_dir: str = "data/export",
-    output_path: str = "data/stage1a-report.json",
+    output_path: str = "data/stage1b-report.json",
 ) -> dict:
     ndjson_dir = Path(ndjson_dir)
     files = sorted(ndjson_dir.glob("*.ndjson"))
@@ -104,7 +104,7 @@ def run(
         print(f"No .ndjson files found in {ndjson_dir}")
         sys.exit(1)
 
-    print(f"Stage 1a — NDJSON structural validation")
+    print(f"Stage 1b — NDJSON structural validation")
     print(f"  {len(files)} files in {ndjson_dir}\n")
 
     file_results = []
@@ -133,7 +133,7 @@ def run(
 
     report = {
         "report_type": "ndjson-structural",
-        "stage": "1a",
+        "stage": "1b",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "ndjson_dir": str(ndjson_dir.resolve()),
         "summary": {
@@ -159,15 +159,15 @@ def run(
     with open(output_path, "w") as f:
         json.dump(report, f, indent=2)
 
-    print(f"\nStage 1a complete: {files_passed} passed, {files_failed} failed, {files_empty} empty")
+    print(f"\nStage 1b complete: {files_passed} passed, {files_failed} failed, {files_empty} empty")
     print(f"Report: {output_path}")
     return report
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Stage 1a: NDJSON structural validation")
+    parser = argparse.ArgumentParser(description="Stage 1b: NDJSON structural validation")
     parser.add_argument("--ndjson-dir", default="data/export")
-    parser.add_argument("--output", default="data/stage1a-report.json")
+    parser.add_argument("--output", default="data/stage1b-report.json")
     args = parser.parse_args()
 
     run(args.ndjson_dir, args.output)

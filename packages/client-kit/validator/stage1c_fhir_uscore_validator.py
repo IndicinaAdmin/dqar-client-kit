@@ -1,5 +1,5 @@
 """
-Stage 1b — Resource conformance validator.
+Stage 1c — Resource conformance validator.
 
 Posts each resource from the exported NDJSON files to the FHIR server's
 $validate operation and classifies the returned OperationOutcome issues as:
@@ -10,7 +10,7 @@ Works against any engagement (Aidbox or HAPI) — both implement $validate
 and return OperationOutcome. Run against multiple engagements to compare
 server behaviour on the same dataset.
 
-Output: data/stage1b-{engagement-name}.json
+Output: data/stage1c-{engagement-name}.json
 """
 
 import argparse
@@ -83,14 +83,14 @@ def run(
     ndjson_dir = Path(ndjson_dir)
 
     if output_path is None:
-        output_path = f"data/stage1b-{engagement.name}.json"
+        output_path = f"data/stage1c-{engagement.name}.json"
 
     files = sorted(ndjson_dir.glob("*.ndjson"))
     if not files:
         print(f"No .ndjson files found in {ndjson_dir}")
         sys.exit(1)
 
-    print(f"Stage 1b — Resource conformance validation")
+    print(f"Stage 1c — Resource conformance validation")
     print(f"  Engagement : {engagement.name} ({engagement.server_type})")
     print(f"  Server     : {engagement.base_url}")
     print(f"  NDJSON dir : {ndjson_dir}\n")
@@ -137,7 +137,7 @@ def run(
 
     report = {
         "report_type": "fhir-validation",
-        "stage": "1b",
+        "stage": "1c",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "engagement": engagement.name,
         "server_type": engagement.server_type,
@@ -156,18 +156,18 @@ def run(
     with open(output_path, "w") as f:
         json.dump(report, f, indent=2)
 
-    print(f"\nStage 1b complete: {total_resources} resources, "
+    print(f"\nStage 1c complete: {total_resources} resources, "
           f"{total_base} base-fhir issues, {total_uscore} us-core issues")
     print(f"Report: {output_path}")
     return report
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Stage 1b: Resource conformance via $validate")
+    parser = argparse.ArgumentParser(description="Stage 1c: Resource conformance via $validate")
     parser.add_argument("--engagement", required=True, help="Path to engagement config JSON")
     parser.add_argument("--ndjson-dir", default="data/export")
     parser.add_argument("--output", default=None,
-                        help="Output path (default: data/stage1b-{engagement-name}.json)")
+                        help="Output path (default: data/stage1c-{engagement-name}.json)")
     args = parser.parse_args()
 
     run(args.engagement, args.ndjson_dir, args.output)

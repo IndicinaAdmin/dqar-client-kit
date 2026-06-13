@@ -11,8 +11,8 @@ config/engagements/
 data/synthea/
 data/export/
 data/preflight-report.json
-data/stage1a-report.json
-data/stage1b-*.json
+data/stage1a-*.json
+data/stage1b-report.json
 data/stage1c-*.json
 data/upload-validation-errors.json
 data/pre-upload-check.json

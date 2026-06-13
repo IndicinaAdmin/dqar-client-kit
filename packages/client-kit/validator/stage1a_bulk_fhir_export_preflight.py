@@ -1,5 +1,5 @@
 """
-Stage 1c — Bulk FHIR API conformance.
+Stage 1a — Bulk FHIR API conformance.
 
 Tests the server's $export implementation against the SMART Bulk Data
 Access IG (https://hl7.org/fhir/uv/bulkdata/):
@@ -13,7 +13,7 @@ Access IG (https://hl7.org/fhir/uv/bulkdata/):
 
 Skipped automatically when Stage 1 preflight reports bulk_export_supported: false.
 
-Output: data/stage1c-{engagement-name}.json
+Output: data/stage1a-{engagement-name}.json
 """
 
 import argparse
@@ -44,9 +44,9 @@ def run(
     engagement = load_engagement(engagement_path)
 
     if output_path is None:
-        output_path = f"data/stage1c-{engagement.name}.json"
+        output_path = f"data/stage1a-{engagement.name}.json"
 
-    print(f"Stage 1c — Bulk FHIR API conformance")
+    print(f"Stage 1a — Bulk FHIR API conformance")
     print(f"  Engagement: {engagement.name} ({engagement.server_type})")
     print(f"  Server    : {engagement.base_url}\n")
 
@@ -57,7 +57,7 @@ def run(
         if not preflight.get("bulk_export_supported", False):
             report = {
                 "report_type": "bulk-fhir-conformance",
-                "stage": "1c",
+                "stage": "1a",
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "engagement": engagement.name,
                 "server_type": engagement.server_type,
@@ -163,7 +163,7 @@ def run(
     overall = "PASS" if all(c["passed"] for c in checks) else "FAIL"
     report = _build_report(engagement, overall, checks)
     _write(report, output_path)
-    print(f"\nStage 1c complete: {overall}")
+    print(f"\nStage 1a complete: {overall}")
     print(f"Report: {output_path}")
     return report
 
@@ -171,7 +171,7 @@ def run(
 def _build_report(engagement, status: str, checks: list) -> dict:
     return {
         "report_type": "bulk-fhir-conformance",
-        "stage": "1c",
+        "stage": "1a",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "engagement": engagement.name,
         "server_type": engagement.server_type,
@@ -193,7 +193,7 @@ def _write(report: dict, output_path: str) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Stage 1c: Bulk FHIR API conformance")
+    parser = argparse.ArgumentParser(description="Stage 1a: Bulk FHIR API conformance")
     parser.add_argument("--engagement", required=True, help="Path to engagement config JSON")
     parser.add_argument("--preflight-report", default="preflight-report.json")
     parser.add_argument("--output", default=None)
