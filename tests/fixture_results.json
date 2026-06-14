@@ -1,0 +1,1619 @@
+[
+  {
+    "fixture": "fixture-01-baseline-clean",
+    "injected": "No mutations \u2014 all source files copied verbatim.",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "PASS"
+    },
+    "notes": "Baseline: all stages should pass.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-01-baseline-clean/stage1a2.json"
+      },
+      "1b": {
+        "status": "PASS",
+        "files_failed": 0,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-01-baseline-clean/stage1b.json",
+        "file_details": []
+      },
+      "1c-i": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-01-baseline-clean/stage1c/stage1c-i-fixture-01-baseline-clean.json"
+      },
+      "1c-ii": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-01-baseline-clean/stage1c/stage1c-ii-fixture-01-baseline-clean.json"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-02-1b-utf8-encoding",
+    "injected": "Patient.ndjson: 3 lines contain 0x80 byte (invalid UTF-8).",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "FAIL"
+    },
+    "notes": "Stage 1b should fail utf8_decodable for Patient.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-02-1b-utf8-encoding/stage1a2.json"
+      },
+      "1b": {
+        "status": "FAIL",
+        "files_failed": 1,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-02-1b-utf8-encoding/stage1b.json",
+        "file_details": [
+          {
+            "file": "Patient.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "utf8_decodable",
+              "no_empty_lines_only",
+              "all_lines_valid_json",
+              "resource_type_present",
+              "filename_matches_type"
+            ],
+            "issue_counts": {
+              "utf8_errors": 1,
+              "json_parse_errors": 0,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 0
+            }
+          }
+        ]
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-03-1b-invalid-json",
+    "injected": "Condition.ndjson: first 5 lines truncated at position 40.",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "FAIL"
+    },
+    "notes": "Stage 1b should fail all_lines_valid_json for Condition.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-03-1b-invalid-json/stage1a2.json"
+      },
+      "1b": {
+        "status": "FAIL",
+        "files_failed": 1,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-03-1b-invalid-json/stage1b.json",
+        "file_details": [
+          {
+            "file": "Condition.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "all_lines_valid_json"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 5,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 0
+            }
+          }
+        ]
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-04-1b-missing-resourcetype",
+    "injected": "Encounter.ndjson: resourceType removed from first 5 records.",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "FAIL"
+    },
+    "notes": "Stage 1b should fail resource_type_present for Encounter.",
+    "stages": {
+      "1a2": {
+        "status": "FAIL",
+        "failed_checks": [
+          "single_type_per_file"
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-04-1b-missing-resourcetype/stage1a2.json"
+      },
+      "1b": {
+        "status": "FAIL",
+        "files_failed": 1,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-04-1b-missing-resourcetype/stage1b.json",
+        "file_details": [
+          {
+            "file": "Encounter.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "resource_type_present"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 0,
+              "missing_resource_type": 5,
+              "resource_type_mismatches": 0
+            }
+          }
+        ]
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-05-1b-filename-mismatch",
+    "injected": "Procedure.ndjson: replaced with Observation records (resourceType=Observation).",
+    "expected": {
+      "1a2": "FAIL",
+      "1b": "FAIL"
+    },
+    "notes": "1b should fail filename_matches_type. 1a2 may also flag mixed types.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-05-1b-filename-mismatch/stage1a2.json"
+      },
+      "1b": {
+        "status": "FAIL",
+        "files_failed": 1,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-05-1b-filename-mismatch/stage1b.json",
+        "file_details": [
+          {
+            "file": "Procedure.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "filename_matches_type"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 0,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 9
+            }
+          }
+        ]
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-06-1b-empty-files",
+    "injected": "Coverage.ndjson: 0 bytes. DiagnosticReport.ndjson: 0 bytes added.",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "WARN"
+    },
+    "notes": "Stage 1b marks empty files; not a hard FAIL. 1a2 may still pass.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-06-1b-empty-files/stage1a2.json"
+      },
+      "1b": {
+        "status": "EMPTY",
+        "files_failed": 0,
+        "files_empty": 2,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-06-1b-empty-files/stage1b.json",
+        "file_details": [
+          {
+            "file": "Coverage.ndjson",
+            "passed": false,
+            "empty": true,
+            "failed_checks": [
+              "no_empty_lines_only",
+              "all_lines_valid_json",
+              "resource_type_present",
+              "filename_matches_type"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 0,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 0
+            }
+          },
+          {
+            "file": "DiagnosticReport.ndjson",
+            "passed": false,
+            "empty": true,
+            "failed_checks": [
+              "no_empty_lines_only",
+              "all_lines_valid_json",
+              "resource_type_present",
+              "filename_matches_type"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 0,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 0
+            }
+          }
+        ]
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-07-1b-mixed-types",
+    "injected": "Condition.ndjson: 3 Observation records appended (two types in one file).",
+    "expected": {
+      "1a2": "FAIL",
+      "1b": "FAIL"
+    },
+    "notes": "1b should fail filename_matches_type. 1a2 should fail single_type_per_file.",
+    "stages": {
+      "1a2": {
+        "status": "FAIL",
+        "failed_checks": [
+          "single_type_per_file"
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-07-1b-mixed-types/stage1a2.json"
+      },
+      "1b": {
+        "status": "FAIL",
+        "files_failed": 1,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-07-1b-mixed-types/stage1b.json",
+        "file_details": [
+          {
+            "file": "Condition.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "filename_matches_type"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 0,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 3
+            }
+          }
+        ]
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-08-1a2-no-patient",
+    "injected": "Patient.ndjson omitted from extract.",
+    "expected": {
+      "1a2": "FAIL",
+      "1b": "PASS"
+    },
+    "notes": "1a2 should fail patient_file_present.",
+    "stages": {
+      "1a2": {
+        "status": "FAIL",
+        "failed_checks": [
+          "patient_file_present"
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-08-1a2-no-patient/stage1a2.json"
+      },
+      "1b": {
+        "status": "PASS",
+        "files_failed": 0,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-08-1a2-no-patient/stage1b.json",
+        "file_details": []
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-09-1a2-missing-core-types",
+    "injected": "Condition.ndjson and Observation.ndjson omitted.",
+    "expected": {
+      "1a2": "FAIL",
+      "1b": "PASS"
+    },
+    "notes": "1a2 should fail hedis_core_types_present.",
+    "stages": {
+      "1a2": {
+        "status": "FAIL",
+        "failed_checks": [
+          "hedis_core_types_present"
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-09-1a2-missing-core-types/stage1a2.json"
+      },
+      "1b": {
+        "status": "PASS",
+        "files_failed": 0,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-09-1a2-missing-core-types/stage1b.json",
+        "file_details": []
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-10-1c-base-r4-errors",
+    "injected": "Observation.ndjson: status stripped from all records. MedicationRequest.ndjson: status+intent stripped from all records. Encounter.ndjson: status+class stripped from first 10 records.",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "PASS",
+      "1c-i": "FAIL"
+    },
+    "notes": "1c-i should catch missing required base R4 fields.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-10-1c-base-r4-errors/stage1a2.json"
+      },
+      "1b": {
+        "status": "PASS",
+        "files_failed": 0,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-10-1c-base-r4-errors/stage1b.json",
+        "file_details": []
+      },
+      "1c-i": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-10-1c-base-r4-errors/stage1c/stage1c-i-fixture-10-1c-base-r4-errors.json"
+      },
+      "1c-ii": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-10-1c-base-r4-errors/stage1c/stage1c-ii-fixture-10-1c-base-r4-errors.json"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-11-1c-uscore-errors",
+    "injected": "Patient.ndjson: identifier removed from all records. Condition.ndjson: category removed from all records. Observation.ndjson: category removed from all records. Encounter.ndjson: type removed from all records.",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "PASS",
+      "1c-ii": "FAIL"
+    },
+    "notes": "1c-ii should catch US Core profile violations.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-11-1c-uscore-errors/stage1a2.json"
+      },
+      "1b": {
+        "status": "PASS",
+        "files_failed": 0,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-11-1c-uscore-errors/stage1b.json",
+        "file_details": []
+      },
+      "1c-i": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-11-1c-uscore-errors/stage1c/stage1c-i-fixture-11-1c-uscore-errors.json"
+      },
+      "1c-ii": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-11-1c-uscore-errors/stage1c/stage1c-ii-fixture-11-1c-uscore-errors.json"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-12-1c-combined-violations",
+    "injected": "Combined mutations from fixture-10 (base R4) and fixture-11 (US Core).",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "PASS",
+      "1c-i": "FAIL",
+      "1c-ii": "FAIL"
+    },
+    "notes": "Both 1c-i and 1c-ii should fail.",
+    "stages": {
+      "1a2": {
+        "status": "PASS",
+        "failed_checks": [],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-12-1c-combined-violations/stage1a2.json"
+      },
+      "1b": {
+        "status": "PASS",
+        "files_failed": 0,
+        "files_empty": 0,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-12-1c-combined-violations/stage1b.json",
+        "file_details": []
+      },
+      "1c-i": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-12-1c-combined-violations/stage1c/stage1c-i-fixture-12-1c-combined-violations.json"
+      },
+      "1c-ii": {
+        "status": "PASS",
+        "error_count": 0,
+        "warning_count": 0,
+        "by_resource_type": [
+          {
+            "resource_type": "AllergyIntolerance",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Appointment",
+            "total": 33,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CarePlan",
+            "total": 5,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "CareTeam",
+            "total": 4,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Condition",
+            "total": 74,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Coverage",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "DocumentReference",
+            "total": 10,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Encounter",
+            "total": 54,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationAdministration",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationRequest",
+            "total": 19,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "MedicationStatement",
+            "total": 13,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Observation",
+            "total": 11,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Organization",
+            "total": 6,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Patient",
+            "total": 100,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Practitioner",
+            "total": 3,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Procedure",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "RelatedPerson",
+            "total": 2,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          },
+          {
+            "resource_type": "Task",
+            "total": 9,
+            "errors": 0,
+            "warnings": 0,
+            "top_errors": []
+          }
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-12-1c-combined-violations/stage1c/stage1c-ii-fixture-12-1c-combined-violations.json"
+      }
+    }
+  },
+  {
+    "fixture": "fixture-13-1b-all-structural-errors",
+    "injected": "Patient.ndjson: UTF-8 corruption in 3 lines. Condition.ndjson: 5 lines truncated at 40 chars. Encounter.ndjson: resourceType removed from 5 records. Coverage.ndjson: emptied to 0 bytes.",
+    "expected": {
+      "1a2": "PASS",
+      "1b": "FAIL"
+    },
+    "notes": "Multiple 1b failure modes in one extract.",
+    "stages": {
+      "1a2": {
+        "status": "FAIL",
+        "failed_checks": [
+          "single_type_per_file"
+        ],
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-13-1b-all-structural-errors/stage1a2.json"
+      },
+      "1b": {
+        "status": "FAIL",
+        "files_failed": 3,
+        "files_empty": 1,
+        "report_path": "/Users/Sonian/Library/CloudStorage/Dropbox-Indicina/Development/dqar-uc1/tests/reports/fixture-13-1b-all-structural-errors/stage1b.json",
+        "file_details": [
+          {
+            "file": "Condition.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "all_lines_valid_json"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 5,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 0
+            }
+          },
+          {
+            "file": "Coverage.ndjson",
+            "passed": false,
+            "empty": true,
+            "failed_checks": [
+              "no_empty_lines_only",
+              "all_lines_valid_json",
+              "resource_type_present",
+              "filename_matches_type"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 0,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 0
+            }
+          },
+          {
+            "file": "Encounter.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "resource_type_present"
+            ],
+            "issue_counts": {
+              "utf8_errors": 0,
+              "json_parse_errors": 0,
+              "missing_resource_type": 5,
+              "resource_type_mismatches": 0
+            }
+          },
+          {
+            "file": "Patient.ndjson",
+            "passed": false,
+            "empty": false,
+            "failed_checks": [
+              "utf8_decodable",
+              "no_empty_lines_only",
+              "all_lines_valid_json",
+              "resource_type_present",
+              "filename_matches_type"
+            ],
+            "issue_counts": {
+              "utf8_errors": 1,
+              "json_parse_errors": 0,
+              "missing_resource_type": 0,
+              "resource_type_mismatches": 0
+            }
+          }
+        ]
+      },
+      "1c-i": {
+        "status": "NOT_RUN"
+      },
+      "1c-ii": {
+        "status": "NOT_RUN"
+      }
+    }
+  }
+]

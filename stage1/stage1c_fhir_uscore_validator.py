@@ -121,9 +121,24 @@ def _by_resource_type(issues: list, resource_counts: dict) -> list:
             (i["code"], i["element"] or "")
             for i in rt_issues if i["severity"] in ("error", "fatal")
         )
+        # Collect up to 3 unique example diagnostics per (code, element) pattern
+        examples_map: dict = collections.defaultdict(list)
+        for i in rt_issues:
+            if i["severity"] not in ("error", "fatal"):
+                continue
+            key = (i["code"], i["element"] or "")
+            diag = (i.get("diagnostics") or "").strip()
+            if diag and diag not in examples_map[key] and len(examples_map[key]) < 3:
+                examples_map[key].append(diag)
+
         # information issues count toward summary but are excluded from top_errors
         top_errors = [
-            {"code": code, "element": element, "count": count}
+            {
+                "code": code,
+                "element": element,
+                "count": count,
+                "examples": examples_map[(code, element)],
+            }
             for (code, element), count in error_counter.most_common(10)
         ]
 
@@ -189,19 +204,35 @@ def _run_hapi_cli(
     extra_flags: list,
 ) -> subprocess.CompletedProcess:
     cmd = [
-        java_bin, "-jar", validator_jar,
+        java_bin, "-Xmx4g", "-jar", validator_jar,
         "-version", FHIR_VERSION,
         "-output", str(output_json),
     ] + extra_flags
     if ig:
         cmd += ["-ig", ig]
     cmd += [str(f) for f in ndjson_files]
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+    # Write stdout/stderr to files instead of pipes. The HAPI CLI writes thousands
+    # of lines during IG loading; pipe buffers drain too slowly in text mode and
+    # cause the subprocess to stall for minutes. File-based I/O has no buffer limit.
+    stdout_file = output_json.with_suffix(".stdout")
+    stderr_file = output_json.with_suffix(".stderr")
+    with open(stdout_file, "w") as sout, open(stderr_file, "w") as serr:
+        proc = subprocess.run(
+            cmd, stdin=subprocess.DEVNULL, stdout=sout, stderr=serr, timeout=1800
+        )
+    stdout_content = stdout_file.read_text(errors="replace") if stdout_file.exists() else ""
+    stderr_content = stderr_file.read_text(errors="replace") if stderr_file.exists() else ""
+    stdout_file.unlink(missing_ok=True)
+    stderr_file.unlink(missing_ok=True)
+    return subprocess.CompletedProcess(
+        cmd, proc.returncode, stdout=stdout_content, stderr=stderr_content
+    )
 
 
 def _extract_validator_version(proc: subprocess.CompletedProcess) -> str:
-    """Parse HAPI CLI version from stderr: 'FHIR Validation tool Version X.Y.Z'."""
-    for line in (proc.stderr or "").splitlines():
+    """Parse HAPI CLI version from stdout or stderr: 'FHIR Validation tool Version X.Y.Z'."""
+    combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    for line in combined.splitlines():
         if "Version" in line:
             parts = line.split("Version", 1)
             if len(parts) > 1:
@@ -245,6 +276,17 @@ def _parse_hapi_output(output_json: Path, valid_stems: set) -> list:
     return issues
 
 
+SAMPLE_MAX = 1_000  # Max records per file sent to the HAPI CLI
+
+
+def _sample_ndjson(src: Path, dest: Path, max_records: int) -> tuple[int, int]:
+    """Write up to max_records lines from src to dest. Returns (written, total)."""
+    lines = [ln for ln in src.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    sample = lines[:max_records]
+    dest.write_text("\n".join(sample) + "\n", encoding="utf-8")
+    return len(sample), len(lines)
+
+
 def _run_hapi_backend(
     ndjson_files: list,
     engagement_name: str,
@@ -270,12 +312,39 @@ def _run_hapi_backend(
         tmp = Path(tmpdir)
         validator_version = None
 
+        # Build sampled file list: files over SAMPLE_MAX are capped to avoid OOM/timeout.
+        # Empty files (0 records) are skipped — the HAPI CLI throws FHIRException on them.
+        sample_dir = tmp / "sampled"
+        sample_dir.mkdir()
+        sampled_files = []
+        sample_meta: dict[str, tuple[int, int]] = {}  # stem → (sampled, total)
+        skipped_empty = []
+        for f in ndjson_files:
+            total = resource_counts.get(f.stem, 0)
+            if total == 0:
+                skipped_empty.append(f.stem)
+                continue
+            if total > SAMPLE_MAX:
+                dest = sample_dir / f.name
+                written, actual_total = _sample_ndjson(f, dest, SAMPLE_MAX)
+                sampled_files.append(dest)
+                sample_meta[f.stem] = (written, actual_total)
+                print(f"    {f.stem}: sampled {written:,} of {actual_total:,}")
+            else:
+                sampled_files.append(f)
+
+        if skipped_empty:
+            print(f"  Skipped {len(skipped_empty)} empty file(s): {', '.join(skipped_empty)}")
+
+        if sample_meta:
+            print(f"  Note: {len(sample_meta)} large file(s) sampled at {SAMPLE_MAX:,} records each")
+
         for sp in SUB_PASSES:
             print(f"  Sub-pass {sp['stage']}: {sp['label']}...", end=" ", flush=True)
 
             hapi_out = tmp / f"{sp['stage']}-output.json"
             proc = _run_hapi_cli(
-                ndjson_files, hapi_out, java_bin, str(jar),
+                sampled_files, hapi_out, java_bin, str(jar),
                 sp["ig"], sp["extra_flags"],
             )
 
@@ -292,9 +361,19 @@ def _run_hapi_backend(
                 timestamp, validator="hapi-cli", validator_version=validator_version,
             )
 
-            # Include stderr tail on non-zero exit so normal runs stay clean
-            if proc.returncode not in (0, None) and proc.stderr:
-                report["validator_stderr_tail"] = proc.stderr[-500:]
+            if skipped_empty:
+                report["skipped_empty_files"] = skipped_empty
+
+            if sample_meta:
+                report["sampled_files"] = {
+                    stem: {"sampled": s, "total": t}
+                    for stem, (s, t) in sample_meta.items()
+                }
+
+            # Store combined stdout+stderr tail for crash diagnosis (HAPI CLI uses stdout for progress)
+            combined_out = ((proc.stdout or "").strip() + "\n" + (proc.stderr or "").strip()).strip()
+            if combined_out or proc.returncode not in (0, None):
+                report["validator_stderr_tail"] = combined_out[-500:]
 
             report_path = output_dir / f"stage{sp['stage']}-{engagement_name}.json"
             report_path.write_text(json.dumps(report, indent=2))

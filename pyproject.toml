@@ -18,6 +18,12 @@ pipeline = [
     "anthropic",
     "python-dotenv",
 ]
+web = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "jinja2",
+]
 report = [
     "anthropic",
     "jinja2",

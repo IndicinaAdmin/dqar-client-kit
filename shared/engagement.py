@@ -7,7 +7,7 @@ Supported server types:
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -25,6 +25,15 @@ class EngagementConfig:
     # HAPI Basic (both optional — HAPI is often open)
     basic_user: Optional[str] = None
     basic_password: Optional[str] = None
+    # Computed — do not pass in constructor
+    fhir_base: str = field(init=False)
+
+    def __post_init__(self):
+        # Aidbox FHIR API lives at {base_url}/fhir; for HAPI the base_url IS the FHIR endpoint
+        if self.server_type == "aidbox":
+            self.fhir_base = f"{self.base_url}/fhir"
+        else:
+            self.fhir_base = self.base_url
 
 
 def load_engagement(config_path) -> EngagementConfig:

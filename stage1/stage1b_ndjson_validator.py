@@ -90,6 +90,19 @@ def check_file(ndjson_path: Path) -> dict:
 
     result["record_count"] = len(parsed)
     result["passed"] = all(result["checks"].values())
+
+    # SUBSETTED detection — resources tagged as summary-mode by the FHIR server.
+    # HAPI FHIR validator suppresses required-element errors on SUBSETTED resources,
+    # which means Stage 1c conformance results are unreliable for these extracts.
+    subsetted = sum(
+        1 for obj in parsed
+        if any(
+            tag.get("code") == "SUBSETTED"
+            for tag in obj.get("meta", {}).get("tag", [])
+        )
+    )
+    result["subsetted_count"] = subsetted
+
     return result
 
 
@@ -151,6 +164,12 @@ def run(
             "total_resource_type_mismatches": sum(
                 r["issue_counts"]["resource_type_mismatches"] for r in file_results
             ),
+            "total_subsetted": sum(
+                r.get("subsetted_count", 0) for r in file_results
+            ),
+            "subsetted_files": [
+                r["file"] for r in file_results if r.get("subsetted_count", 0) > 0
+            ],
         },
         "files": file_results,
     }

@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DQAR Stage 1 Assessment</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      background: #0f2944;
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-wordmark { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.55; }
+    .header-title { font-size: 17px; font-weight: 700; }
+    .header-sep { width: 1px; height: 24px; background: rgba(255,255,255,0.2); }
+    .header-subtitle { font-size: 13px; opacity: 0.6; }
+
+    /* Main */
+    .main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 48px 24px; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+      width: 100%;
+      max-width: 680px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .card-header h1 { font-size: 17px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+    .card-header p { font-size: 13px; color: #6b7280; line-height: 1.5; }
+    .card-body { padding: 24px 28px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .drop-zone.dragover { border-color: #2563eb; background: #eff6ff; }
+    .drop-zone.has-files { border-color: #16a34a; background: #f0fdf4; border-style: solid; }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 36px; margin-bottom: 10px; }
+    .drop-title { font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .drop-hint { font-size: 12px; color: #9ca3af; }
+    .file-list { margin-top: 12px; text-align: left; }
+    .file-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;
+      border-radius: 4px; font-size: 11px; font-weight: 600;
+      padding: 3px 8px; margin: 3px;
+    }
+    .file-chip .rm {
+      cursor: pointer; font-size: 13px; line-height: 1;
+      color: #15803d; opacity: 0.6;
+    }
+    .file-chip .rm:hover { opacity: 1; }
+
+    /* Accordion: optional FHIR server */
+    .accordion { margin-top: 20px; }
+    .accordion-btn {
+      width: 100%;
+      background: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.15s;
+    }
+    .accordion-btn:hover { background: #f9fafb; }
+    .accordion-btn .caret { transition: transform 0.2s; font-size: 10px; }
+    .accordion-btn.open .caret { transform: rotate(180deg); }
+    .accordion-body {
+      display: none;
+      border: 1px solid #e5e7eb;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      padding: 16px;
+      background: #fafafa;
+    }
+    .accordion-body.open { display: block; }
+    .note {
+      font-size: 11px;
+      color: #6b7280;
+      background: #f3f4f6;
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    /* Form fields */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .field input[type="text"], .field input[type="password"], .field input[type="url"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      font-size: 13px;
+      color: #111827;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field-hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+
+    /* Submit */
+    .submit-row { margin-top: 24px; }
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      background: #0f2944;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .btn-submit:hover { background: #1a3d63; }
+    .btn-submit:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    /* Progress overlay */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,41,68,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.active { display: flex; }
+    .progress-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 32px 36px;
+      width: 480px;
+      max-width: 90vw;
+    }
+    .progress-title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 20px; }
+    .stage-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 13px;
+    }
+    .stage-row:last-child { border-bottom: none; }
+    .stage-icon { width: 24px; text-align: center; font-size: 15px; flex-shrink: 0; }
+    .stage-name { font-weight: 600; color: #374151; min-width: 90px; }
+    .stage-msg { color: #6b7280; font-size: 12px; flex: 1; }
+    .stage-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px;
+      letter-spacing: 0.04em; flex-shrink: 0;
+    }
+    .badge-pending  { background: #f3f4f6; color: #9ca3af; }
+    .badge-running  { background: #dbeafe; color: #1d4ed8; font-variant-numeric: tabular-nums; }
+    .badge-PASS     { background: #dcfce7; color: #166534; }
+    .badge-FAIL     { background: #fee2e2; color: #991b1b; }
+    .badge-SKIPPED  { background: #f3f4f6; color: #6b7280; }
+    .badge-BLOCKED  { background: #fef9c3; color: #713f12; }
+    .badge-ERROR    { background: #fee2e2; color: #991b1b; }
+    .badge-NA       { background: #f3f4f6; color: #9ca3af; }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid #dbeafe;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-wordmark">Indicina</div>
+    <div class="header-title">DQAR Stage 1 Assessment</div>
+  </div>
+  <div class="header-sep"></div>
+  <div class="header-subtitle">Digital Quality Audit Readiness — Client-Side Validation</div>
+</div>
+
+<div class="main">
+  <div class="card">
+    <div class="card-header">
+      <h1>Upload FHIR Extract for Validation</h1>
+      <p>
+        Upload your Bulk FHIR export as individual <strong>.ndjson</strong> files,
+        a <strong>.zip</strong>, or a <strong>.tar.gz</strong> archive.
+        Files are validated locally — no data is transmitted outside this machine.
+      </p>
+    </div>
+    <div class="card-body">
+
+      <!-- Drop zone -->
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" multiple
+               accept=".ndjson,.zip,.tar.gz,.tgz">
+        <div class="drop-icon" id="dropIcon">📂</div>
+        <div class="drop-title" id="dropTitle">Drop files here or click to browse</div>
+        <div class="drop-hint">.ndjson files · .zip · .tar.gz — one or more</div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+
+      <!-- Optional: FHIR server (Stage 1a) -->
+      <div class="accordion">
+        <button class="accordion-btn" id="accBtn" type="button" onclick="toggleAcc()">
+          <span>+ Optional: validate Bulk FHIR API (Stage 1a)</span>
+          <span class="caret">▼</span>
+        </button>
+        <div class="accordion-body" id="accBody">
+          <div class="note">
+            Stage 1a tests your FHIR server's <code>$export</code> endpoint directly —
+            CapabilityStatement declaration, 202 response, async polling, manifest structure,
+            and output content-type. Leave the URL blank to skip Stage 1a and validate
+            uploaded files only.
+            <br><br>
+            <strong>Public servers (e.g. hapi.fhir.org):</strong> no credentials needed — leave username and password blank.
+            <strong>Aidbox:</strong> choose "Aidbox (OAuth2)" and provide your client ID and secret.
+            <strong>HAPI with basic auth:</strong> choose "HAPI / other" and provide username and password.
+          </div>
+          <div class="field">
+            <label for="fhirUrl">FHIR Server Base URL</label>
+            <input type="text" id="fhirUrl" name="fhir_url"
+                   placeholder="https://hapi.fhir.org/baseR4">
+            <div class="field-hint">The FHIR base endpoint (e.g. https://hapi.fhir.org/baseR4). Leave blank to skip Stage 1a.</div>
+          </div>
+          <div class="field">
+            <label for="serverType">Server Type</label>
+            <select id="serverType" name="server_type" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:5px;font-size:13px;color:#111827;background:#fff;">
+              <option value="hapi">HAPI / other (no auth or basic auth)</option>
+              <option value="aidbox">Aidbox (OAuth2 client credentials)</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="clientId" id="labelClientId">Username / Client ID <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+              <input type="text" id="clientId" name="client_id" placeholder="username or client_id">
+            </div>
+            <div class="field">
+              <label for="clientSecret" id="labelClientSecret">Password / Client Secret <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+              <input type="password" id="clientSecret" name="client_secret" placeholder="••••••••">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engagement name -->
+      <div class="field" style="margin-top:16px;">
+        <label for="engName">Engagement / Client Name</label>
+        <input type="text" id="engName" name="eng_name"
+               placeholder="e.g. acme-health-jun26" value="client">
+        <div class="field-hint">Used in the report filename and header.</div>
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-row">
+        <button class="btn-submit" id="submitBtn" onclick="submitAssessment()" disabled>
+          Run Stage 1 Assessment
+        </button>
+      </div>
+
+    </div><!-- card-body -->
+  </div><!-- card -->
+</div><!-- main -->
+
+<div class="footer">
+  Files are processed locally by the DQAR assessment engine.
+  No data leaves this machine.
+</div>
+
+<!-- Progress overlay -->
+<div class="overlay" id="overlay">
+  <div class="progress-card">
+    <div class="progress-title" id="overlayTitle">Running DQAR Stage 1 Assessment…</div>
+
+    <div class="stage-row" id="row-1a">
+      <span class="stage-icon" id="icon-1a">⬡</span>
+      <span class="stage-name">Stage 1a-I</span>
+      <span class="stage-msg" id="msg-1a">Bulk FHIR API conformance</span>
+      <span class="stage-badge badge-pending" id="badge-1a">WAITING</span>
+    </div>
+    <div class="stage-row" id="row-1a-ii">
+      <span class="stage-icon" id="icon-1a-ii">⬡</span>
+      <span class="stage-name">Stage 1a-II</span>
+      <span class="stage-msg" id="msg-1a-ii">Extract packaging conformance</span>
+      <span class="stage-badge badge-pending" id="badge-1a-ii">WAITING</span>
+    </div>
+    <div class="stage-row" id="row-1b">
+      <span class="stage-icon" id="icon-1b">⬡</span>
+      <span class="stage-name">Stage 1b</span>
+      <span class="stage-msg" id="msg-1b">NDJSON structural validation</span>
+      <span class="stage-badge badge-pending" id="badge-1b">WAITING</span>
+    </div>
+    <div class="stage-row" id="row-1c-i">
+      <span class="stage-icon" id="icon-1c-i">⬡</span>
+      <span class="stage-name">Stage 1c-I</span>
+      <span class="stage-msg" id="msg-1c-i">Base FHIR R4 conformance</span>
+      <span class="stage-badge badge-pending" id="badge-1c-i">WAITING</span>
+    </div>
+    <div class="stage-row" id="row-1c-ii">
+      <span class="stage-icon" id="icon-1c-ii">⬡</span>
+      <span class="stage-name">Stage 1c-II</span>
+      <span class="stage-msg" id="msg-1c-ii">US Core 6.1.0 conformance</span>
+      <span class="stage-badge badge-pending" id="badge-1c-ii">WAITING</span>
+    </div>
+    <div class="stage-row" id="row-report">
+      <span class="stage-icon" id="icon-report">⬡</span>
+      <span class="stage-name">Report</span>
+      <span class="stage-msg" id="msg-report">Generating findings report</span>
+      <span class="stage-badge badge-pending" id="badge-report">WAITING</span>
+    </div>
+
+    <!-- Findings summary (shown when done) -->
+    <div id="findingsSummary" style="display:none; margin-top:16px; padding:10px 14px;
+         border-radius:6px; font-size:13px; font-weight:600;"></div>
+
+    <!-- Pipeline error (shown instead of alert) -->
+    <div id="pipelineError" style="display:none; margin-top:16px; padding:10px 14px;
+         background:#fee2e2; color:#991b1b; border-radius:6px; font-size:12px;"></div>
+
+    <!-- Action buttons -->
+    <div style="margin-top:16px; display:flex; gap:10px; align-items:center;">
+      <a id="viewReportBtn" href="#" style="display:none; padding:10px 20px;
+         background:#0f2944; color:#fff; border-radius:6px; font-size:13px;
+         font-weight:700; text-decoration:none; letter-spacing:0.02em;">
+        View Report →
+      </a>
+      <button id="overlayCloseBtn" style="display:none; padding:10px 20px;
+         background:#f3f4f6; color:#374151; border:none; border-radius:6px;
+         font-size:13px; font-weight:600; cursor:pointer;" onclick="closeOverlay()">
+        Close
+      </button>
+      <span id="redirectCountdown" style="display:none; font-size:12px; color:#9ca3af;"></span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // -----------------------------------------------------------------------
+  // Server type selector — update credential labels
+  // -----------------------------------------------------------------------
+  document.getElementById('serverType').addEventListener('change', function() {
+    const isAidbox = this.value === 'aidbox';
+    document.getElementById('labelClientId').innerHTML =
+      isAidbox ? 'Client ID' : 'Username <span style="font-weight:400;color:#9ca3af">(optional)</span>';
+    document.getElementById('labelClientSecret').innerHTML =
+      isAidbox ? 'Client Secret' : 'Password <span style="font-weight:400;color:#9ca3af">(optional)</span>';
+    document.getElementById('clientId').placeholder = isAidbox ? 'client_id' : 'username (optional)';
+    document.getElementById('clientSecret').placeholder = '••••••••';
+  });
+
+  // -----------------------------------------------------------------------
+  // File selection
+  // -----------------------------------------------------------------------
+  const dropZone   = document.getElementById('dropZone');
+  const fileInput  = document.getElementById('fileInput');
+  const fileList   = document.getElementById('fileList');
+  const submitBtn  = document.getElementById('submitBtn');
+  const dropIcon   = document.getElementById('dropIcon');
+  const dropTitle  = document.getElementById('dropTitle');
+
+  let selectedFiles = [];
+
+  fileInput.addEventListener('change', () => {
+    addFiles([...fileInput.files]);
+  });
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    addFiles([...e.dataTransfer.files]);
+  });
+
+  function addFiles(newFiles) {
+    const valid = newFiles.filter(f =>
+      f.name.endsWith('.ndjson') || f.name.endsWith('.zip') ||
+      f.name.endsWith('.tar.gz') || f.name.endsWith('.tgz')
+    );
+    valid.forEach(f => {
+      if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
+    });
+    renderFileList();
+  }
+
+  function removeFile(name) {
+    selectedFiles = selectedFiles.filter(f => f.name !== name);
+    renderFileList();
+  }
+
+  function updateSubmitBtn() {
+    const hasFiles = selectedFiles.length > 0;
+    const hasUrl   = document.getElementById('fhirUrl').value.trim().length > 0;
+    submitBtn.disabled = !(hasFiles || hasUrl);
+  }
+
+  document.getElementById('fhirUrl').addEventListener('input', updateSubmitBtn);
+
+  function renderFileList() {
+    if (selectedFiles.length === 0) {
+      fileList.innerHTML = '';
+      dropZone.classList.remove('has-files');
+      dropIcon.textContent = '📂';
+      dropTitle.textContent = 'Drop files here or click to browse';
+      updateSubmitBtn();
+      return;
+    }
+    dropZone.classList.add('has-files');
+    dropIcon.textContent = '✅';
+    dropTitle.textContent = `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected`;
+    updateSubmitBtn();
+    fileList.innerHTML = selectedFiles.map(f =>
+      `<span class="file-chip">
+        ${f.name}
+        <span class="rm" onclick="removeFile('${f.name}');event.stopPropagation()">×</span>
+      </span>`
+    ).join('');
+  }
+
+  // -----------------------------------------------------------------------
+  // Accordion
+  // -----------------------------------------------------------------------
+  function toggleAcc() {
+    const btn  = document.getElementById('accBtn');
+    const body = document.getElementById('accBody');
+    btn.classList.toggle('open');
+    body.classList.toggle('open');
+  }
+
+  // -----------------------------------------------------------------------
+  // Stage status helpers
+  // -----------------------------------------------------------------------
+  const STAGE_MAP = {
+    '1a': '1a', '1a-ii': '1a-ii', '1b': '1b',
+    '1c': '1c-i',   // generic 1c maps to first row
+    '1c-i': '1c-i', '1c-ii': '1c-ii',
+    'report': 'report',
+  };
+
+  // Tracks setInterval IDs for elapsed-time counters, keyed by stage key
+  const _timers = {};
+
+  function _stopTimer(key) {
+    if (_timers[key]) { clearInterval(_timers[key]); delete _timers[key]; }
+  }
+
+  function _fmtElapsed(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+  }
+
+  function setStage(stageKey, status, msg) {
+    const key = STAGE_MAP[stageKey] || stageKey;
+    const icon  = document.getElementById('icon-'  + key);
+    const badge = document.getElementById('badge-' + key);
+    const msgEl = document.getElementById('msg-'   + key);
+    if (!icon) return;
+
+    if (msg) msgEl.textContent = msg;
+
+    _stopTimer(key);
+    badge.className = 'stage-badge';
+
+    if (status === 'running') {
+      icon.innerHTML = '<span class="spinner"></span>';
+      badge.classList.add('badge-running');
+      const start = Date.now();
+      badge.textContent = '0s';
+      _timers[key] = setInterval(() => {
+        badge.textContent = _fmtElapsed(Date.now() - start);
+      }, 1000);
+    } else if (status === 'N/A' || status === 'SKIPPED') {
+      icon.textContent = '—';
+      badge.classList.add(status === 'N/A' ? 'badge-NA' : 'badge-SKIPPED');
+      badge.textContent = status;
+    } else if (status) {
+      icon.textContent = status === 'PASS' ? '✅' :
+                         status === 'BLOCKED' ? '⚠' :
+                         status === 'ERROR'   ? '❌' : '❌';
+      badge.classList.add('badge-' + status);
+      badge.textContent = status;
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Overlay close (used on pipeline error)
+  // -----------------------------------------------------------------------
+  function closeOverlay() {
+    document.getElementById('overlay').classList.remove('active');
+    submitBtn.disabled = false;
+  }
+
+  // -----------------------------------------------------------------------
+  // Submit
+  // -----------------------------------------------------------------------
+  async function submitAssessment() {
+    const hasFiles = selectedFiles.length > 0;
+    const hasUrl   = document.getElementById('fhirUrl').value.trim().length > 0;
+    if (!hasFiles && !hasUrl) return;
+
+    submitBtn.disabled = true;
+    document.getElementById('overlay').classList.add('active');
+
+    // Upload files
+    const fd = new FormData();
+    selectedFiles.forEach(f => fd.append('files', f));
+    fd.append('fhir_url',      document.getElementById('fhirUrl').value.trim());
+    fd.append('eng_name',      document.getElementById('engName').value.trim() || 'client');
+    fd.append('client_id',     document.getElementById('clientId').value.trim());
+    fd.append('client_secret', document.getElementById('clientSecret').value.trim());
+
+    let runId;
+    try {
+      const res = await fetch('/assess', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Upload failed');
+      }
+      const data = await res.json();
+      runId = data.run_id;
+    } catch (e) {
+      alert('Upload error: ' + e.message);
+      document.getElementById('overlay').classList.remove('active');
+      submitBtn.disabled = false;
+      return;
+    }
+
+    // Stream progress via SSE
+    const sse = new EventSource('/stream/' + runId);
+
+    sse.addEventListener('progress', e => {
+      const d = JSON.parse(e.data);
+      const status = d.status || 'running';
+      setStage(d.stage, status, d.msg);
+    });
+
+    sse.addEventListener('done', e => {
+      sse.close();
+      const d = JSON.parse(e.data);
+      setStage('report', 'PASS', 'Report ready');
+
+      // Show findings summary
+      const summaryEl = document.getElementById('findingsSummary');
+      const f = d.findings;
+      if (f === 0) {
+        summaryEl.textContent = 'No findings — all checks passed';
+        summaryEl.style.background = '#dcfce7';
+        summaryEl.style.color = '#166534';
+      } else {
+        summaryEl.textContent =
+          `${f} finding${f !== 1 ? 's' : ''} — Tier 1: ${d.tier1}  ·  Tier 2: ${d.tier2}  ·  Tier 3: ${d.tier3}`;
+        summaryEl.style.background = d.tier1 > 0 ? '#ede9fe' : '#fef9c3';
+        summaryEl.style.color      = d.tier1 > 0 ? '#5b21b6' : '#713f12';
+      }
+      summaryEl.style.display = 'block';
+
+      // Show View Report button + countdown
+      const btn = document.getElementById('viewReportBtn');
+      btn.href = '/report/' + runId;
+      btn.style.display = 'inline-block';
+
+      let secs = 4;
+      const countdown = document.getElementById('redirectCountdown');
+      countdown.style.display = 'inline';
+      countdown.textContent = `Redirecting in ${secs}s…`;
+      const timer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+          clearInterval(timer);
+          window.location.href = '/report/' + runId;
+        } else {
+          countdown.textContent = `Redirecting in ${secs}s…`;
+        }
+      }, 1000);
+    });
+
+    sse.addEventListener('error', e => {
+      sse.close();
+      let msg = 'Assessment pipeline failed.';
+      try { msg = JSON.parse(e.data).msg; } catch {}
+      // Show error inside overlay instead of alert()
+      document.getElementById('overlayTitle').textContent = 'Assessment Error';
+      const errEl = document.getElementById('pipelineError');
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+      document.getElementById('overlayCloseBtn').style.display = 'inline-block';
+    });
+
+    sse.onerror = () => {
+      // SSE connection closed by server after stream ends — expected, ignore
+    };
+  }
+</script>
+</body>
+</html>

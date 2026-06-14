@@ -30,21 +30,21 @@ from shared.engagement import load_engagement, get_fhir_headers
 import requests
 
 POLL_INTERVAL_SECONDS = 5
-POLL_MAX_ATTEMPTS = 60  # 5 min total
+POLL_MAX_ATTEMPTS = 12  # 1 min total
 
 
 def _check(name: str, passed: bool, detail: str = "") -> dict:
     return {"check": name, "passed": passed, "detail": detail}
 
 
-def _check_capability(base_url: str, headers: dict) -> tuple:
+def _check_capability(fhir_base: str, headers: dict) -> tuple:
     """
     Query CapabilityStatement and verify $export is declared.
     Returns (export_declared: bool, detail: str).
     """
     try:
         response = requests.get(
-            f"{base_url}/fhir/metadata",
+            f"{fhir_base}/metadata",
             headers=headers,
             timeout=30,
         )
@@ -81,7 +81,7 @@ def run(
     # Check 1: CapabilityStatement declares $export
     # -----------------------------------------------------------------------
     print("  [1/6] CapabilityStatement declares $export...", end=" ", flush=True)
-    export_declared, cap_detail = _check_capability(engagement.base_url, headers)
+    export_declared, cap_detail = _check_capability(engagement.fhir_base, headers)
     checks.append(_check("capability_declares_export", export_declared, cap_detail))
     print("OK" if export_declared else "SKIP")
 
@@ -99,7 +99,7 @@ def run(
     print("  [2/6] Kicking off $export...", end=" ", flush=True)
     try:
         kick_off = requests.get(
-            f"{engagement.base_url}/fhir/$export",
+            f"{engagement.fhir_base}/$export",
             headers={**headers, "Prefer": "respond-async"},
             timeout=30,
         )
@@ -110,8 +110,9 @@ def run(
     except Exception as exc:
         checks.append(_check("kick_off_accepted", False, str(exc)))
         print(f"FAIL ({exc})")
-        _write(_build_report(engagement, "FAIL", checks), output_path)
-        return
+        report = _build_report(engagement, "FAIL", checks)
+        _write(report, output_path)
+        return report
 
     # -----------------------------------------------------------------------
     # Check 3: Content-Location header
@@ -122,8 +123,9 @@ def run(
     print(f"  [3/6] Content-Location: {'present' if content_location else 'MISSING'}")
 
     if not content_location:
-        _write(_build_report(engagement, "FAIL", checks), output_path)
-        return
+        report = _build_report(engagement, "FAIL", checks)
+        _write(report, output_path)
+        return report
 
     # -----------------------------------------------------------------------
     # Check 4: Poll for completion
@@ -145,8 +147,9 @@ def run(
     print("OK" if polling_ok else "FAIL")
 
     if not polling_ok:
-        _write(_build_report(engagement, "FAIL", checks), output_path)
-        return
+        report = _build_report(engagement, "FAIL", checks)
+        _write(report, output_path)
+        return report
 
     # -----------------------------------------------------------------------
     # Check 5: Manifest structure
@@ -155,8 +158,9 @@ def run(
         manifest = status_response.json()
     except Exception:
         checks.append(_check("manifest_valid", False, "response not valid JSON"))
-        _write(_build_report(engagement, "FAIL", checks), output_path)
-        return
+        report = _build_report(engagement, "FAIL", checks)
+        _write(report, output_path)
+        return report
 
     has_output = "output" in manifest
     has_requires_token = "requiresAccessToken" in manifest

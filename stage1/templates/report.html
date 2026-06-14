@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DQAR Stage 1 Assessment — {{ engagement }}</title>
+  <style>
+    /* ------------------------------------------------------------------ */
+    /* Reset & base                                                         */
+    /* ------------------------------------------------------------------ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #1a202c;
+      background: #f7f8fa;
+    }
+    h1 { font-size: 20px; }
+    h2 { font-size: 15px; font-weight: 600; }
+    h3 { font-size: 13px; font-weight: 600; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th { text-align: left; font-weight: 600; }
+
+    /* ------------------------------------------------------------------ */
+    /* Layout                                                               */
+    /* ------------------------------------------------------------------ */
+    .page { max-width: 960px; margin: 0 auto; padding: 0 24px 48px; }
+
+    /* ------------------------------------------------------------------ */
+    /* Header                                                               */
+    /* ------------------------------------------------------------------ */
+    .header {
+      background: #0f2944;
+      color: #fff;
+      padding: 28px 32px 24px;
+      margin: 0 -24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .header-left {}
+    .header-wordmark { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6; margin-bottom: 6px; }
+    .header-title { font-size: 22px; font-weight: 700; line-height: 1.2; margin-bottom: 4px; }
+    .header-subtitle { font-size: 13px; opacity: 0.7; }
+    .header-meta { text-align: right; }
+    .header-engagement { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .header-date { font-size: 12px; opacity: 0.65; }
+    .overall-badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .overall-PASS    { background: #166534; color: #dcfce7; }
+    .overall-FINDINGS { background: #92400e; color: #fef3c7; }
+    .overall-INCOMPLETE { background: #7c3aed; color: #ede9fe; }
+
+    /* ------------------------------------------------------------------ */
+    /* Section heading                                                      */
+    /* ------------------------------------------------------------------ */
+    .section-heading {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: #6b7280;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 6px;
+      margin: 32px 0 16px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Stage summary cards                                                  */
+    /* ------------------------------------------------------------------ */
+    .stage-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .stage-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+    .stage-card-id { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 4px; }
+    .stage-card-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px; line-height: 1.3; }
+    .stage-card-detail { font-size: 11px; color: #6b7280; }
+
+    /* ------------------------------------------------------------------ */
+    /* Status badges                                                        */
+    /* ------------------------------------------------------------------ */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .badge-PASS    { background: #dcfce7; color: #166534; }
+    .badge-FAIL    { background: #fee2e2; color: #991b1b; }
+    .badge-SKIPPED { background: #f3f4f6; color: #6b7280; }
+    .badge-BLOCKED { background: #fef9c3; color: #713f12; }
+    .badge-ERROR   { background: #fee2e2; color: #991b1b; }
+    .badge-UNKNOWN { background: #f3f4f6; color: #6b7280; }
+    .badge-N\/A    { background: #f3f4f6; color: #9ca3af; }
+
+    /* ------------------------------------------------------------------ */
+    /* Findings                                                             */
+    /* ------------------------------------------------------------------ */
+    .tier-section { margin-bottom: 24px; }
+    .tier-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .tier-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .tier1-dot { background: #7c3aed; }
+    .tier2-dot { background: #dc2626; }
+    .tier3-dot { background: #d97706; }
+    .tier-label { font-size: 13px; font-weight: 700; }
+    .tier1-label { color: #6d28d9; }
+    .tier2-label { color: #b91c1c; }
+    .tier3-label { color: #b45309; }
+    .tier-count { font-size: 11px; color: #9ca3af; }
+
+    .finding {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid;
+      border-radius: 0 6px 6px 0;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .finding-tier1 { border-left-color: #7c3aed; }
+    .finding-tier2 { border-left-color: #dc2626; }
+    .finding-tier3 { border-left-color: #d97706; }
+
+    .finding-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .finding-title { font-size: 13px; font-weight: 600; color: #111827; }
+    .sev-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.04em;
+    }
+    .sev-HIGH   { background: #fee2e2; color: #991b1b; }
+    .sev-MEDIUM { background: #fef3c7; color: #92400e; }
+    .sev-LOW    { background: #f0fdf4; color: #166534; }
+    .finding-detail { font-size: 12px; color: #4b5563; line-height: 1.6; margin-bottom: 6px; }
+    .finding-source { font-size: 10px; color: #9ca3af; font-style: italic; }
+
+    /* ------------------------------------------------------------------ */
+    /* Detail tables                                                        */
+    /* ------------------------------------------------------------------ */
+    .detail-block {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .detail-block-header {
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-block-body { padding: 0; }
+
+    table.data-table th, table.data-table td {
+      padding: 8px 14px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+    table.data-table thead th {
+      background: #f9fafb;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #6b7280;
+      font-weight: 700;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    table.data-table tbody tr:last-child td { border-bottom: none; }
+    table.data-table tbody tr:hover { background: #fafafa; }
+
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .zero { color: #9ca3af; }
+    .err  { color: #dc2626; font-weight: 600; }
+    .warn { color: #d97706; }
+
+    /* Stage 1a check list */
+    .check-list { padding: 4px 0; }
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 12px;
+    }
+    .check-row:last-child { border-bottom: none; }
+    .check-icon { flex-shrink: 0; width: 16px; height: 16px; line-height: 16px; text-align: center; font-size: 13px; margin-top: 1px; }
+    .check-name { font-weight: 500; color: #374151; min-width: 220px; }
+    .check-detail { color: #6b7280; font-size: 11px; }
+
+    /* ------------------------------------------------------------------ */
+    /* Error drilldown                                                      */
+    /* ------------------------------------------------------------------ */
+    details.err-drill summary {
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      color: #dc2626;
+      list-style: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      user-select: none;
+    }
+    details.err-drill summary::-webkit-details-marker { display: none; }
+    details.err-drill summary::before { content: "▶"; font-size: 9px; transition: transform 0.15s; }
+    details.err-drill[open] summary::before { transform: rotate(90deg); }
+    details.err-drill summary .drill-label { color: #dc2626; }
+    .err-pattern-list { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+    .err-pattern {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 4px;
+      padding: 7px 10px;
+    }
+    .err-pattern-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .err-pattern-element {
+      font-size: 11px;
+      font-weight: 600;
+      color: #991b1b;
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+    .err-pattern-code {
+      font-size: 10px;
+      color: #b91c1c;
+      background: #fee2e2;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .err-count { font-size: 10px; color: #7f1d1d; margin-left: auto; }
+    .err-examples { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+    .err-examples li {
+      font-size: 11px;
+      color: #4b5563;
+      line-height: 1.5;
+      padding-left: 10px;
+      border-left: 2px solid #fca5a5;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Footer                                                               */
+    /* ------------------------------------------------------------------ */
+    .footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 11px;
+      color: #9ca3af;
+      line-height: 1.7;
+    }
+    .footer strong { color: #6b7280; }
+
+    /* ------------------------------------------------------------------ */
+    /* Download button                                                      */
+    /* ------------------------------------------------------------------ */
+    .dl-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 5px 12px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 4px;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      letter-spacing: 0.03em;
+    }
+    .dl-btn:hover { background: rgba(255,255,255,0.20); }
+    @media print { .dl-btn { display: none; } }
+
+    /* ------------------------------------------------------------------ */
+    /* Print                                                                */
+    /* ------------------------------------------------------------------ */
+    @media print {
+      body { background: #fff; font-size: 11px; }
+      .page { max-width: 100%; padding: 0; }
+      .header { margin: 0 0 24px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .stage-cards { grid-template-columns: repeat(5, 1fr); }
+      .finding, .detail-block { break-inside: avoid; }
+      .section-heading { margin-top: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ================================================================ -->
+  <!-- HEADER                                                             -->
+  <!-- ================================================================ -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-wordmark">Indicina</div>
+      <div class="header-title">DQAR Stage 1 Assessment</div>
+      <div class="header-subtitle">Digital Quality Audit Readiness — Conformance Report</div>
+    </div>
+    <div class="header-meta">
+      <div class="header-engagement">{{ engagement }}</div>
+      <div class="header-date">{{ date_str }}{% if time_str %} · {{ time_str }}{% endif %}</div>
+      <div>
+        <span class="overall-badge overall-{{ overall }}">
+          {% if overall == "PASS" %}✓ All Checks Passed
+          {% elif overall == "FINDINGS" %}⚠ Findings Identified
+          {% else %}⬡ Assessment Incomplete
+          {% endif %}
+        </span>
+      </div>
+      <div>
+        <a class="dl-btn" id="dl-json" href="#" onclick="downloadJSON(event)">
+          ↓ Download JSON Report
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- STAGE SUMMARY                                                      -->
+  <!-- ================================================================ -->
+  <div class="section-heading">Assessment Summary</div>
+  <div class="stage-cards">
+    {% for card in stage_cards %}
+    <div class="stage-card">
+      <div class="stage-card-id">Stage {{ card.stage }}</div>
+      <div class="badge badge-{{ card.status }}">{{ card.status }}</div>
+      <div class="stage-card-label">{{ card.label }}</div>
+      <div class="stage-card-detail">{{ card.detail }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- DQAR FINDINGS                                                      -->
+  <!-- ================================================================ -->
+  {% if findings %}
+  <div class="section-heading">DQAR Findings ({{ findings|length }} total)</div>
+
+  {% if tier1 %}
+  <div class="tier-section">
+    <div class="tier-header">
+      <span class="tier-dot tier1-dot"></span>
+      <span class="tier-label tier1-label">Tier 1 — Governance Gap</span>
+      <span class="tier-count">{{ tier1|length }} finding{% if tier1|length != 1 %}s{% endif %}</span>
+    </div>
+    {% for f in tier1 %}
+    <div class="finding finding-tier1">
+      <div class="finding-meta">
+        <span class="sev-badge sev-{{ f.severity }}">{{ f.severity }}</span>
+      </div>
+      <div class="finding-title">{{ f.title }}</div>
+      <div class="finding-detail">{{ f.detail }}</div>
+      {% if f.lines %}
+      <ul style="margin: 6px 0 6px 16px; padding: 0; font-size: 12px; color: #374151; line-height: 1.7;">
+        {% for line in f.lines %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      <div class="finding-source">{{ f.source }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if tier2 %}
+  <div class="tier-section">
+    <div class="tier-header">
+      <span class="tier-dot tier2-dot"></span>
+      <span class="tier-label tier2-label">Tier 2 — Measure Data Gap</span>
+      <span class="tier-count">{{ tier2|length }} finding{% if tier2|length != 1 %}s{% endif %}</span>
+    </div>
+    {% for f in tier2 %}
+    <div class="finding finding-tier2">
+      <div class="finding-meta">
+        <span class="sev-badge sev-{{ f.severity }}">{{ f.severity }}</span>
+      </div>
+      <div class="finding-title">{{ f.title }}</div>
+      <div class="finding-detail">{{ f.detail }}</div>
+      {% if f.lines %}
+      <ul style="margin: 6px 0 6px 16px; padding: 0; font-size: 12px; color: #374151; line-height: 1.7;">
+        {% for line in f.lines %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      <div class="finding-source">{{ f.source }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if tier3 %}
+  <div class="tier-section">
+    <div class="tier-header">
+      <span class="tier-dot tier3-dot"></span>
+      <span class="tier-label tier3-label">Tier 3 — Digital Readiness Gap</span>
+      <span class="tier-count">{{ tier3|length }} finding{% if tier3|length != 1 %}s{% endif %}</span>
+    </div>
+    {% for f in tier3 %}
+    <div class="finding finding-tier3">
+      <div class="finding-meta">
+        <span class="sev-badge sev-{{ f.severity }}">{{ f.severity }}</span>
+      </div>
+      <div class="finding-title">{{ f.title }}</div>
+      <div class="finding-detail">{{ f.detail }}</div>
+      {% if f.lines %}
+      <ul style="margin: 6px 0 6px 16px; padding: 0; font-size: 12px; color: #374151; line-height: 1.7;">
+        {% for line in f.lines %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      <div class="finding-source">{{ f.source }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="section-heading">DQAR Findings</div>
+  <div class="finding" style="border-left-color: #16a34a; background: #f0fdf4;">
+    <div class="finding-title" style="color: #166534;">✓ No findings — all tested checks passed</div>
+    <div class="finding-detail" style="color: #4b5563;">{{ no_findings_detail }}</div>
+  </div>
+  {% endif %}
+
+  <!-- ================================================================ -->
+  <!-- STAGE 1a-I DETAIL                                                 -->
+  <!-- ================================================================ -->
+  {% if stage1a_checks %}
+  <div class="section-heading">Stage 1a-I — Bulk FHIR API Server Detail</div>
+  <div class="detail-block">
+    <div class="detail-block-header">
+      {% for card in stage_cards %}{% if card.stage == "1a-i" %}<span class="badge badge-{{ card.status }}" style="margin-right:4px;">1A-I {{ card.status }}</span>{% endif %}{% endfor %}
+      Bulk FHIR API Server Conformance
+      {% if stage1a_server %}<span style="margin-left:auto;font-weight:400;color:#6b7280;font-size:11px;">{{ stage1a_server }}</span>{% endif %}
+    </div>
+    <div class="check-list">
+      {% for check in stage1a_checks %}
+      <div class="check-row">
+        <span class="check-icon">{% if check.passed %}✅{% else %}❌{% endif %}</span>
+        <span class="check-name">{{ check.check }}</span>
+        <span class="check-detail">{{ check.detail }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ================================================================ -->
+  <!-- STAGE 1a-II DETAIL                                                -->
+  <!-- ================================================================ -->
+  {% if stage1a2_checks %}
+  <div class="section-heading">Stage 1a-II — Bulk FHIR Extract Packaging Detail</div>
+  <div class="detail-block">
+    <div class="detail-block-header">
+      {% for card in stage_cards %}{% if card.stage == "1a-ii" %}<span class="badge badge-{{ card.status }}" style="margin-right:4px;">1A-II {{ card.status }}</span>{% endif %}{% endfor %}
+      Bulk FHIR Extract Packaging
+      <span style="margin-left:auto;font-weight:400;color:#6b7280;font-size:11px;">
+        {{ stage1a2_summary.total_resources|fmt }} resources · {{ stage1a2_summary.resource_types_found }} types
+      </span>
+    </div>
+    <div class="check-list">
+      {% for check in stage1a2_checks %}
+      <div class="check-row">
+        <span class="check-icon">{% if check.passed %}✅{% else %}❌{% endif %}</span>
+        <span class="check-name">{{ check.check }}</span>
+        <span class="check-detail">{{ check.detail }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% if stage1a2_resource_types %}
+    <div style="border-top: 1px solid #f3f4f6;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Resource Type</th>
+            <th class="num">Count</th>
+            <th>DEQM<br><span style="font-weight:400;font-size:10px;">Reporting framework</span></th>
+            <th>QI-Core<br><span style="font-weight:400;font-size:10px;">Measure logic (5 priority ECDS)</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rt in stage1a2_resource_types %}
+          <tr>
+            <td><strong>{{ rt.resource_type }}</strong>{% if rt.deqm_status == "required-missing" or rt.qicore_status == "required-missing" %} <span style="font-size:10px;color:#9ca3af;font-weight:400;">not in extract</span>{% endif %}</td>
+            <td class="num">{{ rt.count|fmt }}</td>
+            <td>
+              {% if rt.deqm_status == "required" %}
+                <span style="color:#166534;font-weight:600;">Required</span>
+              {% elif rt.deqm_status == "required-missing" %}
+                <span style="color:#991b1b;font-weight:600;">Required</span>
+              {% else %}
+                <span style="color:#6b7280;">Optional</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if rt.qicore_status == "required" %}
+                <span style="color:#166534;font-weight:600;">Required</span>
+              {% elif rt.qicore_status == "required-missing" %}
+                <span style="color:#991b1b;font-weight:600;">Required</span>
+              {% elif rt.qicore_status == "optional" %}
+                <span style="color:#6b7280;">Optional</span>
+              {% else %}
+                <span style="color:#d1d5db;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ================================================================ -->
+  <!-- STAGE 1b DETAIL                                                    -->
+  <!-- ================================================================ -->
+  {% if stage1b_files %}
+  <div class="section-heading">Stage 1b — NDJSON Structural Detail</div>
+  <div class="detail-block">
+    <div class="detail-block-header">
+      {% for card in stage_cards %}{% if card.stage == "1b" %}<span class="badge badge-{{ card.status }}" style="margin-right:4px;">1B {{ card.status }}</span>{% endif %}{% endfor %}
+      NDJSON Structural Validation
+      <span style="margin-left:auto;font-weight:400;color:#6b7280;font-size:11px;">
+        {{ stage1b_summary.files_checked or 0 }} files · {{ (stage1b_summary.total_records or 0)|fmt }} records
+      </span>
+    </div>
+    <div class="detail-block-body">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th class="num">Records</th>
+            <th>UTF-8</th>
+            <th>JSON</th>
+            <th>resourceType</th>
+            <th>Type match</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in stage1b_files %}
+          <tr>
+            <td>{{ f.file }}</td>
+            <td class="num">{% if f.empty %}—{% else %}{{ f.record_count|fmt }}{% endif %}</td>
+            <td>{% if f.checks.utf8_decodable %}✓{% else %}<span class="err">✗</span>{% endif %}</td>
+            <td>{% if f.checks.all_lines_valid_json %}✓{% else %}<span class="err">✗ {{ f.issue_counts.json_parse_errors }}</span>{% endif %}</td>
+            <td>{% if f.checks.resource_type_present %}✓{% else %}<span class="err">✗ {{ f.issue_counts.missing_resource_type }}</span>{% endif %}</td>
+            <td>{% if f.checks.filename_matches_type %}✓{% else %}<span class="err">✗ {{ f.issue_counts.resource_type_mismatches }}</span>{% endif %}</td>
+            <td>
+              {% if f.empty %}<span class="badge badge-SKIPPED">EMPTY</span>
+              {% elif f.passed %}<span class="badge badge-PASS">PASS</span>
+              {% else %}<span class="badge badge-FAIL">FAIL</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ================================================================ -->
+  <!-- STAGE 1c COMBINED DETAIL                                           -->
+  <!-- ================================================================ -->
+  {% if rt_table %}
+  <div class="section-heading">Stage 1c — Conformance Detail by Resource Type</div>
+  <div class="detail-block">
+    <div class="detail-block-header">
+      {% for card in stage_cards %}
+        {% if card.stage in ("1c-i", "1c-ii") %}
+          <span class="badge badge-{{ card.status }}" style="margin-right:4px;">{{ card.stage | upper }} {{ card.status }}</span>
+        {% endif %}
+      {% endfor %}
+      FHIR R4 + US Core 6.1.0 Conformance
+    </div>
+    <div class="detail-block-body">
+      {% if stage1c_skipped_empty %}
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#78350f;">
+        <strong>Excluded from conformance validation:</strong>
+        {{ stage1c_skipped_empty | join(', ') }}
+        ({{ stage1c_skipped_empty | length }} file{% if stage1c_skipped_empty | length != 1 %}s{% endif %} with zero records —
+        the FHIR validator cannot process empty files).
+        See Stage 1b findings for the data gap assessment.
+      </div>
+      {% endif %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Resource Type</th>
+            <th class="num">Total</th>
+            <th>1C-I<br><span style="font-weight:400">Base FHIR R4</span></th>
+            <th>1C-II<br><span style="font-weight:400">US Core 6.1.0</span></th>
+            <th>Error Patterns <span style="font-weight:400;color:#9ca3af">(click to expand)</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rt_table %}
+          <tr>
+            <td><strong>{{ row.resource_type }}</strong></td>
+            <td class="num">{{ row.total|fmt }}</td>
+            <td>
+              {% if row.errors_i > 0 %}
+                <span class="badge badge-FAIL">FAIL</span>
+                <span class="err" style="font-size:11px;margin-left:4px;">{{ row.errors_i|fmt }} error{% if row.errors_i != 1 %}s{% endif %}</span>
+                {% if row.warnings_i > 0 %}<span class="warn" style="font-size:10px;margin-left:4px;">+{{ row.warnings_i|fmt }} warn</span>{% endif %}
+              {% else %}
+                <span class="badge badge-PASS">PASS</span>
+                {% if row.warnings_i > 0 %}<span class="warn" style="font-size:10px;margin-left:4px;">{{ row.warnings_i|fmt }} warn</span>{% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if row.errors_ii > 0 %}
+                <span class="badge badge-FAIL">FAIL</span>
+                <span class="err" style="font-size:11px;margin-left:4px;">{{ row.errors_ii|fmt }} error{% if row.errors_ii != 1 %}s{% endif %}</span>
+                {% if row.warnings_ii > 0 %}<span class="warn" style="font-size:10px;margin-left:4px;">+{{ row.warnings_ii|fmt }} warn</span>{% endif %}
+              {% else %}
+                <span class="badge badge-PASS">PASS</span>
+                {% if row.warnings_ii > 0 %}<span class="warn" style="font-size:10px;margin-left:4px;">{{ row.warnings_ii|fmt }} warn</span>{% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% set all_top = [] %}
+              {% if row.top_errors_i %}{% for e in row.top_errors_i %}{% if e.count > 0 %}{% set _ = all_top.append(("1C-I", e)) %}{% endif %}{% endfor %}{% endif %}
+              {% if row.top_errors_ii %}{% for e in row.top_errors_ii %}{% if e.count > 0 %}{% set _ = all_top.append(("1C-II", e)) %}{% endif %}{% endfor %}{% endif %}
+              {% if all_top %}
+              <details class="err-drill">
+                <summary>
+                  <span class="drill-label">{{ all_top|length }} error pattern{% if all_top|length != 1 %}s{% endif %}</span>
+                </summary>
+                <div class="err-pattern-list">
+                  {% for pass_label, e in all_top %}
+                  <div class="err-pattern">
+                    <div class="err-pattern-header">
+                      <span class="err-pattern-element">{{ e.element or e.code or "(unknown)" }}</span>
+                      {% if e.element and e.code %}<span class="err-pattern-code">{{ e.code }}</span>{% endif %}
+                      <span style="font-size:10px;color:#9ca3af;">{{ pass_label }}</span>
+                      <span class="err-count">×{{ e.count|fmt }}</span>
+                    </div>
+                    {% if e.examples %}
+                    <ul class="err-examples">
+                      {% for ex in e.examples %}
+                      <li>{{ ex }}</li>
+                      {% endfor %}
+                    </ul>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+              </details>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ================================================================ -->
+  <!-- FOOTER                                                             -->
+  <!-- ================================================================ -->
+  <div class="footer">
+    <strong>DQAR Methodology.</strong>
+    This report was generated by Indicina's Digital Quality Audit Readiness (DQAR) Stage 1 conformance kit.
+    Stage 1 tests five independent dimensions: Bulk FHIR API server conformance (Stage 1a-I), Bulk FHIR extract
+    packaging (Stage 1a-II), NDJSON structural validity (Stage 1b), and FHIR R4 + US Core 6.1.0 profile conformance
+    (Stage 1c-I / 1c-II). A plan may pass 1a-I and 1b while every resource fails 1c — these are independent questions.
+    <br><br>
+    <strong>Three-tier findings.</strong>
+    Tier 1 (Governance Gap) identifies organizational failures that will recur next measurement period without process change.
+    Tier 2 (Measure Data Gap) identifies technical data quality failures that affect quality measure rates today.
+    Tier 3 (Digital Readiness Gap) identifies capability gaps against MY2029 ECDS mandatory reporting and the
+    CMS-0057-F January 1, 2027 deadline.
+    <br><br>
+    <strong>Conformance target:</strong> US Core 6.1.0 (USCDI v3).
+    Plans on US Core 3.1.1 should declare their version; Indicina assesses against the available version
+    and documents the conformance delta as a Tier 3 finding.
+    <br><br>
+    Confidential — prepared for {{ engagement }} by Indicina. Not for distribution.
+    Generated {{ date_str }}{% if time_str %} at {{ time_str }}{% endif %}.
+  </div>
+
+</div><!-- .page -->
+
+<script id="report-data" type="application/json">
+{{ report_json }}
+</script>
+<script>
+function downloadJSON(e) {
+  e.preventDefault();
+  var data = document.getElementById('report-data').textContent;
+  var blob = new Blob([data], {type: 'application/json'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = '{{ engagement }}-report.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

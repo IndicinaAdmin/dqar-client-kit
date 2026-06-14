@@ -10,14 +10,23 @@ config/engagements/
 # generated data — too large or contains sensitive output
 data/synthea/
 data/export/
+data/reports/
 data/preflight-report.json
 data/stage1a-*.json
+data/stage1a2-*.json
 data/stage1b-report.json
+data/stage1b-*.json
 data/stage1c-*.json
+data/stage1-report-*.html
 data/upload-validation-errors.json
 data/pre-upload-check.json
 data/failed-bundles.txt
 data/uscore-failed.txt
+
+# test fixture outputs (ndjson already excluded; also exclude reports)
+tests/fixtures/fixture-*/
+tests/reports/
+tests/reports-1c/
 
 # root-level artefacts from early runs
 preflight-report.json
