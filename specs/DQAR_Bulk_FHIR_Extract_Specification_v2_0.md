@@ -182,15 +182,15 @@ The pipeline attaches **seven extension fields** to every AuditEvent it generate
 |---|---|---|---|
 | `http://indicina.com/fhir/ext/source-type` (EXT 1) | valueCode | `clinical_ehr` | Expanded 13-value vocabulary. **Tier A** (structurally detectable): `clinical_ehr`, `administrative_claims`, `administrative_encounter`, `pharmacy_pbm`, `clinical_lab`, `payer_exchange`, `clinical_immunization_registry`. **Tier B** (manifest/meta.source only): `clinical_phr`, `pharmacy_specialty`, `clinical_hie`, `clinical_registry`, `case_management`, `disease_management`. Tier B resources defaulting to `unknown` are Tier 1 governance findings. |
 | `http://indicina.com/fhir/ext/source-system-id` (EXT 2) | valueString | `epic-prod-org-447` | Pseudonymized identifier of the specific source system instance. Consistent across all resources from same source. Enables Study Type 1 and 2 lineage tracing. |
-| `http://indicina.com/fhir/ext/ingest-pipeline-id` (EXT 3) | valueString | `dqar-20251014-001/epic-prod-org447/Condition.ndjson-chunk-003` | Three-level traceability: run / feed / batch. Enables batch-level error isolation without full re-scan. |
-| `http://indicina.com/fhir/ext/source-feed-id` (EXT 4) | valueString | `epic-prod-org-447` | Feed-level identifier independent of full pipeline composite. Primary key for feed-level findings queries and risk stratification matrix. |
-| `http://indicina.com/fhir/ext/source-inference-confidence` (EXT 5) | valueCode | `asserted` | Confidence tier: `asserted` \| `high` \| `medium` \| `low` \| `unknown`. Confidence distribution across the extract is a direct provenance maturity metric and Tier 1 governance finding driver. |
-| `http://indicina.com/fhir/ext/ecds-ssor` (EXT 6) | valueCode | `EHR/PHR` | NCQA ECDS Source of Record (SSoR) category. Four-value vocabulary: `EHR/PHR` \| `Administrative` \| `Clinical Registry/HIE` \| `Case/Disease Mgmt`. Derived from source-type via deterministic SSoR mapping rule. `null` when source-type = `unknown` — triggers Tier 1 governance finding. |
+| `http://indicina.com/fhir/ext/source-feed-id` (EXT 3) | valueString | `epic-prod-org-447` | Feed-level identifier independent of full pipeline composite. Primary key for feed-level findings queries and risk stratification matrix. |
+| `http://indicina.com/fhir/ext/source-inference-confidence` (EXT 4) | valueCode | `asserted` | Confidence tier: `asserted` \| `high` \| `medium` \| `low` \| `unknown`. Confidence distribution across the extract is a direct provenance maturity metric and Tier 1 governance finding driver. |
+| `http://indicina.com/fhir/ext/ecds-ssor` (EXT 5) | valueCode | `EHR/PHR` | NCQA ECDS Source of Record (SSoR) category. Four-value vocabulary: `EHR/PHR` \| `Administrative` \| `Clinical Registry/HIE` \| `Case/Disease Mgmt`. Derived from source-type via deterministic SSoR mapping rule. `null` when source-type = `unknown` — triggers Tier 1 governance finding. |
+| `http://indicina.com/fhir/ext/ingest-pipeline-id` (EXT 6) | valueString | `dqar-20251014-001/epic-prod-org447/Condition.ndjson-chunk-003` | Three-level traceability: run / feed / batch. Enables batch-level error isolation without full re-scan. |
 | `http://indicina.com/fhir/ext/ol-run-id` (EXT 7) | valueString | `550e8400-e29b-41d4-a716-446655440000` | OpenLineage run ID (UUID v4) of the ingest job that wrote this resource. Creates a bidirectional join between the AuditEvent and the OpenLineage lineage graph (Marquez/OpenMetadata). Required for DQAR provenance maturity Level 3+. |
 
 ### 3.2 Source-Type to SSoR Mapping
 
-| source-type (EXT 1) | ECDS SSoR (EXT 6) |
+| source-type (EXT 1) | ECDS SSoR (EXT 5) |
 |---|---|
 | `clinical_ehr` | EHR/PHR |
 | `clinical_phr` | EHR/PHR |
@@ -221,21 +221,21 @@ The pipeline attaches **seven extension fields** to every AuditEvent it generate
       "valueCode": "clinical_ehr" },                                    // EXT 1
     { "url": "http://indicina.com/fhir/ext/source-system-id",
       "valueString": "epic-prod-org-447" },                             // EXT 2
-    { "url": "http://indicina.com/fhir/ext/ingest-pipeline-id",
-      "valueString": "dqar-20251014-001/epic-prod-org447/Condition.ndjson-chunk-003" }, // EXT 3
     { "url": "http://indicina.com/fhir/ext/source-feed-id",
-      "valueString": "epic-prod-org-447" },                             // EXT 4
+      "valueString": "epic-prod-org-447" },                             // EXT 3
     { "url": "http://indicina.com/fhir/ext/source-inference-confidence",
-      "valueCode": "asserted" },                                        // EXT 5
+      "valueCode": "asserted" },                                        // EXT 4
     { "url": "http://indicina.com/fhir/ext/ecds-ssor",
-      "valueCode": "EHR/PHR" },                                         // EXT 6
+      "valueCode": "EHR/PHR" },                                         // EXT 5
+    { "url": "http://indicina.com/fhir/ext/ingest-pipeline-id",
+      "valueString": "dqar-20251014-001/epic-prod-org447/Condition.ndjson-chunk-003" }, // EXT 6
     { "url": "http://indicina.com/fhir/ext/ol-run-id",
       "valueString": "550e8400-e29b-41d4-a716-446655440000" }           // EXT 7
   ]
 }
 ```
 
-> EXT 6 (`ecds-ssor`) uses the four-category NCQA SSoR vocabulary and is derived from EXT 1 (`source-type`) via deterministic mapping rule. SSoR = `null` when `source-type = unknown`, which triggers a Tier 1 governance finding on metadata management maturity. EXT 7 (`ol-run-id`) is a UUID v4 set by the pipeline orchestrator at ingest time; it is the join key between AuditEvent and the OpenLineage lineage graph.
+> EXT 5 (`ecds-ssor`) uses the four-category NCQA SSoR vocabulary and is derived from EXT 1 (`source-type`) via deterministic mapping rule. SSoR = `null` when `source-type = unknown`, which triggers a Tier 1 governance finding on metadata management maturity. EXT 6 (`ingest-pipeline-id`) and EXT 7 (`ol-run-id`) are both set by the pipeline orchestrator at ingest time; EXT 7 is the join key between AuditEvent and the OpenLineage lineage graph.
 
 ---
 
@@ -389,9 +389,10 @@ For questions about CARIN Blue Button IG (ExplanationOfBenefit profile): https:/
 | Client paths | Not explicit | Path A (stop), Path B (anonymized sandbox), Path C (full PHI, plan-owned Aidbox) |
 | AuditEvent extensions | 4 extensions | 7 extensions |
 | EXT 1 source-type vocabulary | 5 values: ehr-clinical, administrative, lab, pharmacy, p2p | 13 values with Tier A/B detectability framework |
-| EXT 4 source-feed-id | Informal | Formal — primary key for feed-level queries |
-| EXT 5 source-inference-confidence | Informal | Formal — direct provenance maturity metric |
-| EXT 6 ecds-ssor | Not present | **New** — four-category NCQA SSoR vocabulary |
+| EXT 3 source-feed-id | Informal | Formal — primary key for feed-level queries |
+| EXT 4 source-inference-confidence | Informal | Formal — direct provenance maturity metric |
+| EXT 5 ecds-ssor | Not present | **New** — four-category NCQA SSoR vocabulary |
+| EXT 6 ingest-pipeline-id | Informal | Formal — orchestrator-set; three-level run/feed/batch traceability |
 | EXT 7 ol-run-id | Not present | **New** — OpenLineage run ID UUID; enables bidirectional join to lineage graph; required for Level 3+ maturity |
 | SSoR mapping table | Not present | Full 12-type → SSoR mapping rule |
 | Tier 1 finding name | Compliance gap | Governance gap (DAMA-BOK grounded) |
