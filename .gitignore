@@ -36,4 +36,5 @@ synthea.jar
 tools/*.jar
 *.ndjson
 *.ndjson.gz
+*.tar.gz
 pseudonym_map_*.json

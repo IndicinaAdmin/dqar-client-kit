@@ -39,9 +39,34 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.engagement import load_engagement, get_fhir_headers
 
+import shutil
+
 import requests
 
-JAVA_BIN = os.environ.get("JAVA_BIN", "java")
+
+def _resolve_java() -> str:
+    """Return a working java binary path, checking Homebrew fallbacks on macOS."""
+    candidate = os.environ.get("JAVA_BIN", "java")
+    # shutil.which skips stubs that exist but aren't executable JVMs
+    if shutil.which(candidate):
+        try:
+            result = subprocess.run(
+                [candidate, "-version"], capture_output=True, timeout=5
+            )
+            if result.returncode == 0:
+                return candidate
+        except Exception:
+            pass
+    for fallback in [
+        "/opt/homebrew/opt/openjdk/bin/java",
+        "/usr/local/opt/openjdk/bin/java",
+    ]:
+        if Path(fallback).exists():
+            return fallback
+    return candidate  # let the caller surface the error
+
+
+JAVA_BIN = _resolve_java()
 VALIDATOR_JAR = os.environ.get("FHIR_VALIDATOR_JAR", "tools/validator_cli.jar")
 FHIR_VERSION = "4.0.1"
 US_CORE_IG = "hl7.fhir.us.core#6.1.0"

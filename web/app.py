@@ -49,7 +49,30 @@ _TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 _RUNS: dict[str, dict] = {}
 
 VALIDATOR_JAR = os.environ.get("FHIR_VALIDATOR_JAR", str(_ROOT / "tools" / "validator_cli.jar"))
-JAVA_BIN      = os.environ.get("JAVA_BIN", "java")
+
+
+def _resolve_java() -> str:
+    """Return a working java binary, checking Homebrew fallbacks on macOS."""
+    import shutil
+    import subprocess
+    candidate = os.environ.get("JAVA_BIN", "java")
+    if shutil.which(candidate):
+        try:
+            r = subprocess.run([candidate, "-version"], capture_output=True, timeout=5)
+            if r.returncode == 0:
+                return candidate
+        except Exception:
+            pass
+    for fallback in [
+        "/opt/homebrew/opt/openjdk/bin/java",
+        "/usr/local/opt/openjdk/bin/java",
+    ]:
+        if Path(fallback).exists():
+            return fallback
+    return candidate
+
+
+JAVA_BIN = _resolve_java()
 
 
 # ---------------------------------------------------------------------------
