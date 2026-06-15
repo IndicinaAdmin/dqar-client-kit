@@ -96,7 +96,7 @@ def _build_context(report: dict) -> dict:
         "stage1c_i_summary": s1c_i.get("summary", {}) if s1c_i else {},
         "stage1c_ii_summary": s1c_ii.get("summary", {}) if s1c_ii else {},
         "stage1c_skipped_empty": (
-            s1c_i.get("skipped_empty_files") or
+            (s1c_i.get("skipped_empty_files") if s1c_i else None) or
             (s1c_ii.get("skipped_empty_files") if s1c_ii else None) or []
         ),
         "rt_table": rt_table,
