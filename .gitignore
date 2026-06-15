@@ -38,3 +38,4 @@ tools/*.jar
 *.ndjson.gz
 *.tar.gz
 pseudonym_map_*.json
+*.egg-info/

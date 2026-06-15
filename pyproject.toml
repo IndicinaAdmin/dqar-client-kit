@@ -1,23 +1,21 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "dqar-uc1"
+name = "dqar-client-kit"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
+description = "DQAR client-side conformance testing kit and local assessment server"
+dependencies = [
+    "dqar-contracts>=1.0.0,<2.0.0",
+    "requests",
+]
+
+[tool.setuptools.packages.find]
+include = ["shared*", "stage1*", "stage2*", "web*"]
 
 [project.optional-dependencies]
-client = [
-    "requests",
-    "click",
-]
-pipeline = [
-    "requests",
-    "psycopg2-binary",
-    "anthropic",
-    "python-dotenv",
-]
 web = [
     "fastapi",
     "uvicorn[standard]",

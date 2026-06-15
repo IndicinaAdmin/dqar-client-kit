@@ -28,6 +28,7 @@ Outputs (written to --output-dir, default data/reports/):
 
 import argparse
 import json
+import subprocess as _subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,9 +38,10 @@ _STAGE1 = Path(__file__).resolve().parent        # stage1/
 sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(_STAGE1))
 
-import stage1a_bulk_fhir_export_preflight as _1a
-import stage1b_ndjson_validator           as _1b
-import stage1c_fhir_uscore_validator      as _1c
+import stage1a_bulk_fhir_export_preflight  as _1a
+import stage1a2_bulk_fhir_extract_preflight as _1a2
+import stage1b_ndjson_validator            as _1b
+import stage1c_fhir_uscore_validator       as _1c
 from findings import derive_findings
 from report   import render_html
 from shared.engagement import load_engagement
@@ -110,6 +112,21 @@ def run(
     timestamp = datetime.now(timezone.utc)
     stamp     = timestamp.strftime("%Y%m%d-%H%M")
 
+    # -----------------------------------------------------------------------
+    # Contracts validation — runs before any stage
+    # -----------------------------------------------------------------------
+    try:
+        _subprocess.run(
+            [sys.executable, "-m", "dqar_contracts.validate", "--list-viewdefs"],
+            check=True, capture_output=True, text=True
+        )
+    except _subprocess.CalledProcessError as e:
+        print("✗   dqar-contracts ViewDefinition validation failed:")
+        print(e.stdout)
+        print(e.stderr)
+        print("    Fix dqar-contracts before running assessment.")
+        # Non-fatal for client kit (ViewDefs are Aidbox-side) — warn only
+
     _banner(engagement_name, ndjson_dir, backend, out)
 
     reports: dict = {}
@@ -130,6 +147,25 @@ def run(
         except Exception as exc:
             reports["stage1a"] = {"status": "ERROR", "error": str(exc)}
             print(f"  Stage 1a error: {exc}")
+
+    # -----------------------------------------------------------------------
+    # Stage 1a-ii — Extract packaging conformance
+    # -----------------------------------------------------------------------
+    has_ndjson = Path(ndjson_dir).exists() and any(Path(ndjson_dir).glob("*.ndjson"))
+    if has_ndjson:
+        _section("Stage 1a-ii — Extract packaging conformance")
+        path_1a2 = str(out / f"stage1a2-{engagement_name}.json")
+        try:
+            reports["stage1a_ii"] = _1a2.run(
+                ndjson_dir=ndjson_dir,
+                engagement=engagement_name,
+                output_path=path_1a2,
+            )
+        except Exception as exc:
+            reports["stage1a_ii"] = {"status": "ERROR", "error": str(exc)}
+            print(f"  Stage 1a-ii error: {exc}")
+    else:
+        reports["stage1a_ii"] = None
 
     # -----------------------------------------------------------------------
     # Stage 1b — NDJSON structural validation
@@ -194,6 +230,7 @@ def run(
         "engagement":   engagement_name,
         "generated_at": timestamp.isoformat(),
         "stage1a":      reports.get("stage1a"),
+        "stage1a_ii":   reports.get("stage1a_ii"),
         "stage1b":      reports.get("stage1b"),
         "stage1c_i":    reports.get("stage1c_i"),
         "stage1c_ii":   reports.get("stage1c_ii"),
