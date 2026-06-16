@@ -45,7 +45,7 @@ This is the core commercial architecture of the DQAR engagement. The premise: pl
 
 ```
 RUNG 1 — Offline Conformance Testing (no PHI leaves the plan, no HS infrastructure required)
-  What runs:      Client-side conformance testing kit — Stage 1 (stage1a, stage1b, stage1c)
+  What runs:      Client-side conformance testing kit — Stage 1 (stage1a, stage1a2, stage1b, stage1c)
                   Governance assessment interviews (Track B, Level 6)
                   Feed manifest construction
   What Sonian delivers:  Preliminary findings on structural and conformance gaps
@@ -135,11 +135,12 @@ RUNG 4 — Full PHI Operational Mode (Path C — target state)
 - Client provides feed manifest (engagement kickoff) declaring all source system feeds
 - Client provides anonymized Bulk FHIR export (ndjson via `$export`) + VSD access (Mode 1, 2, or 3)
 - Client runs Sonian-provided conformance testing kit on own infrastructure — PHI never leaves client environment:
-  - Stage 1: Bulk FHIR API conformance (live server test)
-  - Stage 2: ndjson structural conformance testing
-  - Stage 3a: Base FHIR R4 (v4.0.1) structural conformance testing
-  - Stage 3: US Core 6.1.0 profile conformance
-- Anonymized extract + three conformance reports delivered to Sonian
+  - Stage 1a: Bulk FHIR API conformance (live server test)
+  - Stage 1a2: Bulk FHIR extract packaging conformance
+  - Stage 1b: ndjson structural conformance testing
+  - Stage 1c-i: Base FHIR R4 (v4.0.1) structural conformance testing
+  - Stage 1c-ii: US Core 6.1.0 profile conformance
+- Anonymized extract + combined conformance report (JSON + HTML) delivered to Sonian
 - Sonian loads to Aidbox sandbox with AuditEvent + seven extension metadata fields generated atomically
 - Level 6 governance assessment via structured interviews and documentation review
 - Findings report and roadmap delivered

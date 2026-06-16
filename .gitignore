@@ -11,6 +11,7 @@ config/engagements/
 data/synthea/
 data/export/
 data/reports/
+data/redacted/
 data/preflight-report.json
 data/stage1a-*.json
 data/stage1a2-*.json
@@ -42,4 +43,5 @@ tools/*.jar
 *.ndjson.gz
 *.tar.gz
 pseudonym_map_*.json
+.dqar-redact-salt-*
 *.egg-info/

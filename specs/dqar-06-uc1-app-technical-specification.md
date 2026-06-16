@@ -16,16 +16,18 @@ This document specifies the technical architecture for the UC1 Digital Measure R
 
 ## Architecture Summary
 
-The pipeline has six stages. Stage 1 (with substages 1a–1c) executes entirely in the client environment against PHI-containing data. Stage 2 (PHI redaction) is optional and client-initiated. Stages 3–6 execute in the Sonian or plan-owned Aidbox environment.
+The pipeline has six stages. Stage 1 (with substages 1a, 1a2, 1b, 1c) executes entirely in the client environment against PHI-containing data. Stage 2 (PHI redaction) is optional and client-initiated. Stages 3–6 execute in the Sonian or plan-owned Aidbox environment.
 
 ```
 CLIENT ENVIRONMENT (PHI present)
 
   Stage 1:   Bulk FHIR Export and Conformance Testing
              The client's IT team runs the conformance testing kit against their
-             FHIR vendor extract. Three substages run in sequence.
+             FHIR vendor extract. Four substages run in sequence, orchestrated
+             by orchestrate.py.
              All PHI stays within the client environment.
-             Outputs: three JSON reports + three PDF renders.
+             Outputs: one combined JSON report + one combined HTML report
+             (rolled up from the per-substage JSON files below).
 
     Stage 1a: Bulk FHIR API conformance    [stage1a_bulk_fhir_export_preflight.py]
               CapabilityStatement query · $export kick-off · manifest
@@ -34,21 +36,33 @@ CLIENT ENVIRONMENT (PHI present)
               Skipped if $export not declared in CapabilityStatement.
               Output: stage1a-{engagement}.json
 
+    Stage 1a2: Bulk FHIR extract packaging conformance  [stage1a2_bulk_fhir_extract_preflight.py]
+              Extract not empty · Patient.ndjson present · HEDIS core types
+              present (Condition, Observation, Encounter) · medication data
+              present · single resource type per file.
+              Runs against the exported ndjson files. Skipped if no ndjson
+              files are present.
+              Output: stage1a2-{engagement}.json
+
     Stage 1b: ndjson structural conformance testing  [stage1b_ndjson_validator.py]
               Parseable JSON · resourceType present · one resource per
               line · UTF-8 encoding · resourceType matches filename stem
               (Patient.ndjson must contain only Patient resources).
               Runs against the exported ndjson files.
-              Output: stage1b-{engagement}.json + PDF render
+              Output: stage1b-{engagement}.json
 
     Stage 1c: FHIR R4 + US Core conformance [stage1c_fhir_uscore_validator.py]
               1c-i  — Base FHIR R4 (4.0.1) structural conformance testing (no IG)
               1c-ii — US Core 6.1.0 profile conformance testing
               --backend hapi-cli (default): HAPI Validator CLI, no server needed (Rung 1/2)
+                --tx-mode local (default): no terminology server connection,
+                  structure/profile checks only
+                --tx-mode live: connects to tx.fhir.org for full terminology
+                  binding validation, ~20% slower
               --backend aidbox: Aidbox $validate REST API, engagement config required (Rung 3+)
               Output: stage1c-i-{engagement}.json + stage1c-ii-{engagement}.json
 
-  → Client receives three JSON reports + three PDF renders.
+  → Client receives one combined JSON report + one combined HTML report.
   → Client decision point — three paths forward:
 
   PATH A — Stop here (no data leaves the plan)
@@ -74,10 +88,16 @@ CLIENT ENVIRONMENT (PHI present)
             This is the target state — the platform ladder destination.
 
   Stage 2:  PHI redaction + anonymization   [PATH B ONLY — client-initiated]
-            Client runs local redaction against the Bulk FHIR extract.
-            Produces anonymized ndjson — no member-identifiable fields.
+            NOT YET IMPLEMENTED — stage2/ is currently an empty package;
+            docker-compose.yml, docker-compose.uc3.yml, and
+            config/anonymization.yaml referenced below are planned, not
+            present in the repo yet.
+            Target design: client runs local redaction against the Bulk
+            FHIR extract via the Docker Compose stack (docker/), producing
+            anonymized, compressed ndjson (.ndjson.gz) — no
+            member-identifiable fields.
             Not required for Path A or Path C.
-            Output: anonymized extract ready for Sonian delivery.
+            Output: anonymized .ndjson.gz extract ready for Sonian delivery.
 
 PHI BOUNDARY — PATH B ONLY
   Anonymized extract + Stage 1 reports cross to Sonian.
@@ -121,11 +141,11 @@ PLAN'S OWN AIDBOX INSTANCE — PATH C (full PHI operational mode)
 
 ---
 
-## Client-Side Conformance Testing Kit (Stage 1 — Substages 1a, 1b, 1c)
+## Client-Side Conformance Testing Kit (Stage 1 — Substages 1a, 1a2, 1b, 1c)
 
 ### Deliverable to client at engagement kickoff
 
-Sonian provides a conformance testing kit the client's IT team runs on their own infrastructure against raw PHI-containing ndjson. No PHI leaves the client environment. The kit produces three JSON reports and three PDF renders. The client decides independently whether to proceed to the optional PHI redaction (Stage 2) and Sonian sandbox (Stage 3) stages.
+Sonian provides a conformance testing kit the client's IT team runs on their own infrastructure against raw PHI-containing ndjson. No PHI leaves the client environment. `orchestrate.py` sequences all substages and produces one combined JSON report and one combined HTML report (no PDF rendering). The client decides independently whether to proceed to the optional PHI redaction (Stage 2) and Sonian sandbox (Stage 3) stages.
 
 The kit supports two validator backends for Stages 1b and 1c:
 - **HAPI Validator CLI** — default, no vendor contract required, runs anywhere Java is available (Rung 1 and Rung 2)
@@ -139,11 +159,17 @@ Skipped automatically if preflight reports `bulk_export_supported: false`.
 
 Output: `stage1a-{engagement}.json`
 
+### Stage 1a2 — Bulk FHIR extract packaging conformance  `stage1a2_bulk_fhir_extract_preflight.py`
+
+Verifies the ndjson file set constitutes a well-formed Bulk FHIR extract suitable for digital quality assessment: extract not empty, `Patient.ndjson` present (denominator population), HEDIS core types present (Condition, Observation, Encounter), medication data present (MedicationRequest or MedicationDispense), single resource type per file. Does not re-validate JSON structure — that is Stage 1b's responsibility. Library-only (no standalone CLI); invoked by `orchestrate.py` and the web app. Skipped if no ndjson files are present.
+
+Output: `stage1a2-{engagement}.json`
+
 ### Stage 1b — ndjson structural conformance testing  `stage1b_ndjson_validator.py`
 
 Validates every line of every ndjson file in the Bulk FHIR export: parseable JSON, `resourceType` present, one resource per line. Runs against raw PHI-containing export output. No PHI in the output report — aggregate counts and error descriptions only.
 
-Output: `stage1b-{engagement}.json` + PDF render
+Output: `stage1b-{engagement}.json`
 
 ### Stage 1c — FHIR R4 + US Core conformance  `stage1c_fhir_uscore_validator.py`
 
@@ -155,7 +181,8 @@ python stage1c_fhir_uscore_validator.py \
   --ndjson-dir data/export \
   --engagement client-name \
   --backend hapi-cli \
-  --validator-jar tools/validator_cli.jar
+  --validator-jar tools/validator_cli.jar \
+  --tx-mode local
 
 # Rung 3+ — Aidbox $validate REST API (engagement config required)
 python stage1c_fhir_uscore_validator.py \
@@ -168,7 +195,7 @@ Both produce identical output files:
 - `stage1c-i-{engagement}.json` — base FHIR R4 results
 - `stage1c-ii-{engagement}.json` — US Core 6.1.0 results
 
-For `--backend hapi-cli`, sub-passes run sequentially via the HAPI Validator CLI JAR (set `FHIR_VALIDATOR_JAR` env var or pass `--validator-jar`). For `--backend aidbox`, each resource is POSTed to `{base_url}/fhir/{ResourceType}/$validate` and OperationOutcome issues are classified into 1c-i (base FHIR R4) or 1c-ii (US Core) based on whether a US Core profile URL appears in the issue diagnostics. The `--engagement` argument must be a path to an engagement config JSON when using `--backend aidbox`.
+For `--backend hapi-cli`, sub-passes run sequentially via the HAPI Validator CLI JAR (set `FHIR_VALIDATOR_JAR` env var or pass `--validator-jar`). Both `--tx-mode` values resolve FHIR R4 + US Core 6.1.0 + terminology dependency packages (`hl7.terminology.r4`, `us.nlm.vsac`, `us.cdc.phinvads`; ~940MB) from a pinned, project-local cache (`.fhir-cache/`, gitignored) rather than the developer's home directory, so structural/profile validation behavior is identical across machines and CI. The cache is warmed once during the Docker image build (`RUN python tools/provision_fhir_cache.py`) or restored from a CI cache step — not regenerated per test run. `--tx-mode` only controls whether the validator *additionally* connects out to a terminology server for binding validation: `local` (default) passes `-tx n/a` — no outbound connection, terminology binding checks are skipped, structure/profile checks still run against the local cache — while `live` connects to `tx.fhir.org` for full terminology binding validation on top of the same structure/profile checks (~20% slower). For `--backend aidbox`, each resource is POSTed to `{base_url}/fhir/{ResourceType}/$validate` and OperationOutcome issues are classified into 1c-i (base FHIR R4) or 1c-ii (US Core) based on whether a US Core profile URL appears in the issue diagnostics. The `--engagement` argument must be a path to an engagement config JSON when using `--backend aidbox`.
 
 ### Conformance report format (delivered to Sonian — no PHI)
 
@@ -178,6 +205,8 @@ For `--backend hapi-cli`, sub-passes run sequentially via the HAPI Validator CLI
   "stage": "1c-ii",
   "validator": "hapi-cli",
   "validator_version": "6.3.x",
+  "tx_mode": "local",
+  "terminology_binding_validation": "skipped (local tx-mode — no terminology server connection)",
   "ig_version": "hl7.fhir.us.core#6.1.0",
   "us_core_version": "6.1.0",
   "fhir_version": "4.0.1",
@@ -204,7 +233,7 @@ For `--backend hapi-cli`, sub-passes run sequentially via the HAPI Validator CLI
 }
 ```
 
-Field notes: `"validator"` is `"hapi-cli"` or `"aidbox"` depending on `--backend`. `"validator_version"` is present only for `hapi-cli` (extracted from HAPI CLI stderr). `"ig_version"` and `"us_core_version"` are present only in the 1c-ii report. Both backends produce structurally identical reports.
+Field notes: `"validator"` is `"hapi-cli"` or `"aidbox"` depending on `--backend`. `"validator_version"` is present only for `hapi-cli` (extracted from HAPI CLI stderr). `"tx_mode"` and `"terminology_binding_validation"` are present only for `hapi-cli`; the latter only when `tx_mode` is `"local"`. `"ig_version"` and `"us_core_version"` are present only in the 1c-ii report. Both backends produce structurally identical reports.
 
 ---
 
@@ -587,10 +616,11 @@ Full query implementations: `queries/level3/` directory in the UC1 app repo.
 | Component | Rung 1–2 default | Rung 3+ upgrade | Notes |
 |---|---|---|---|
 | Bulk FHIR API conformance | stage1a_bulk_fhir_export_preflight (Python) | stage1a_bulk_fhir_export_preflight (same) | Live server test — no validator dependency |
+| Extract packaging conformance (Stage 1a2) | stage1a2_bulk_fhir_extract_preflight (Python) | stage1a2_bulk_fhir_extract_preflight (same) | Library-only, no external dependency |
 | ndjson validator (Stage 1b) | stage1b_ndjson_validator (Python) | stage1b_ndjson_validator (same) | No external dependency |
-| FHIR R4 structural conformance testing | HAPI Validator CLI | Aidbox native conformance testing | HAPI: no vendor contract needed |
+| FHIR R4 structural conformance testing | HAPI Validator CLI | Aidbox native conformance testing | HAPI: no vendor contract needed; `--tx-mode local` (default) or `live` |
 | US Core 6.1.0 conformance | HAPI Validator CLI + US Core IG | Aidbox native validation | HAPI: runs anywhere Java available |
-| Report output | JSON + PDF render | JSON + PDF render | Three reports per kit run |
+| Report output | One combined JSON + one combined HTML | One combined JSON + one combined HTML | No PDF rendering; orchestrate.py rolls up all substage JSON into a single report |
 
 **Validator backend is a deliberate ladder design decision.** HAPI is the default because it requires no Health Samurai contract, no HIPAA review, no procurement — the client runs it on their own infrastructure with no external dependencies beyond a Java runtime. When the plan advances to Rung 3 and has Aidbox in production, the conformance testing backend switches to Aidbox native conformance testing, which provides richer error metadata, write-time conformance testing rather than post-hoc, and consistent behaviour between the client kit and the sandbox. The reports are structurally identical regardless of backend — the findings format does not change.
 

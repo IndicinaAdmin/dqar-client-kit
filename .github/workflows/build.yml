@@ -1,0 +1,79 @@
+name: Build & test container image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dqar-client-kit
+        uses: actions/checkout@v4
+
+      - name: Checkout dqar-contracts (sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: IndicinaAdmin/dqar-contracts
+          path: dqar-contracts
+          # dqar-contracts is pinned >=1.0.0,<2.0.0 in pyproject.toml; CI
+          # tracks main same as local dev (`pip install -e ../dqar-contracts`).
+          token: ${{ secrets.DQAR_CONTRACTS_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: |
+          docker buildx build \
+            --build-context contracts=./dqar-contracts \
+            -t dqar-client-kit:ci \
+            --load \
+            .
+
+      # tests/fixtures/fixture-*/ is gitignored (regenerated locally via
+      # tests/generate_fixtures.py from a Synthea-derived seed that isn't
+      # committed) — not available in a fresh checkout. build_compliant_reference.py
+      # is the dependency-free path: no live FHIR server, no Synthea, hand-coded
+      # US Core 6.1.0 + QI Core conformant resources. Use it as the CI regression
+      # input until the fixture seed has a reproducible-in-CI source (tracked as
+      # a follow-up, not blocking this build).
+      - name: Build deterministic reference extract
+        run: python3 tests/build_compliant_reference.py
+
+      - name: Run Stage 1 against the built image
+        run: |
+          docker run --rm \
+            -v "$PWD/data/compliant-reference":/app/data/export:ro \
+            dqar-client-kit:ci \
+            python stage1/orchestrate.py --ndjson-dir data/export --skip-1a --output-dir /tmp/out
+
+      - name: Stage 2 redaction regression check
+        run: |
+          docker run --rm \
+            -v "$PWD/data/compliant-reference":/app/data/export:ro \
+            dqar-client-kit:ci \
+            python stage2/anonymize_extract.py --ndjson-dir data/export --output-dir /tmp/redacted --engagement ci
+
+      - name: Verify .fhir-cache was baked into the image (no runtime download)
+        run: |
+          docker run --rm dqar-client-kit:ci \
+            python -c "import pathlib,sys; p=pathlib.Path('/app/.fhir-cache'); sys.exit(0 if p.is_dir() and any(p.iterdir()) else 1)"
+
+      - name: Build release tarball
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          docker save dqar-client-kit:ci | gzip > "dist/dqar-client-kit-${VERSION}.tar.gz"
+          shasum -a 256 "dist/dqar-client-kit-${VERSION}.tar.gz" > "dist/dqar-client-kit-${VERSION}.tar.gz.sha256"
+
+      - name: Upload release artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: dqar-client-kit-image
+          path: dist/*

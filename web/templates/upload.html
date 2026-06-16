@@ -301,6 +301,19 @@
         <div class="field-hint">Used in the report filename and header.</div>
       </div>
 
+      <!-- Stage 2 — PHI redaction (Path B only, opt-in) -->
+      <div class="field" style="margin-top:12px;">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:500; cursor:pointer;">
+          <input type="checkbox" id="redactToggle" style="width:auto;">
+          Also produce a de-identified extract for Sonian delivery (Path B)
+        </label>
+        <div class="field-hint">
+          Runs Stage 2 PHI redaction against the uploaded NDJSON after Stage 1 completes.
+          Optional — nothing leaves this machine either way; this just prepares the
+          anonymized .ndjson.gz bundle you would send on if you choose Path B.
+        </div>
+      </div>
+
       <!-- Submit -->
       <div class="submit-row">
         <button class="btn-submit" id="submitBtn" onclick="submitAssessment()" disabled>
@@ -352,6 +365,12 @@
       <span class="stage-msg" id="msg-1c-ii">US Core 6.1.0 conformance</span>
       <span class="stage-badge badge-pending" id="badge-1c-ii">WAITING</span>
     </div>
+    <div class="stage-row" id="row-stage2">
+      <span class="stage-icon" id="icon-stage2">⬡</span>
+      <span class="stage-name">Stage 2</span>
+      <span class="stage-msg" id="msg-stage2">PHI redaction (Path B)</span>
+      <span class="stage-badge badge-pending" id="badge-stage2">WAITING</span>
+    </div>
     <div class="stage-row" id="row-report">
       <span class="stage-icon" id="icon-report">⬡</span>
       <span class="stage-name">Report</span>
@@ -379,6 +398,11 @@
          font-size:13px; font-weight:600; cursor:pointer;" onclick="closeOverlay()">
         Close
       </button>
+      <a id="downloadRedactedBtn" href="#" style="display:none; padding:10px 20px;
+         background:#fff; color:#0f2944; border:1px solid #0f2944; border-radius:6px;
+         font-size:13px; font-weight:700; text-decoration:none; letter-spacing:0.02em;">
+        Download De-identified Extract
+      </a>
       <span id="redirectCountdown" style="display:none; font-size:12px; color:#9ca3af;"></span>
     </div>
 
@@ -563,6 +587,9 @@
     fd.append('eng_name',      document.getElementById('engName').value.trim() || 'client');
     fd.append('client_id',     document.getElementById('clientId').value.trim());
     fd.append('client_secret', document.getElementById('clientSecret').value.trim());
+    const wantsRedact = document.getElementById('redactToggle').checked;
+    fd.append('redact', wantsRedact ? 'true' : 'false');
+    document.getElementById('row-stage2').style.display = wantsRedact ? 'flex' : 'none';
 
     let runId;
     try {
@@ -613,6 +640,12 @@
       const btn = document.getElementById('viewReportBtn');
       btn.href = '/report/' + runId;
       btn.style.display = 'inline-block';
+
+      if (d.redacted) {
+        const dlBtn = document.getElementById('downloadRedactedBtn');
+        dlBtn.href = '/redacted/' + runId;
+        dlBtn.style.display = 'inline-block';
+      }
 
       let secs = 4;
       const countdown = document.getElementById('redirectCountdown');

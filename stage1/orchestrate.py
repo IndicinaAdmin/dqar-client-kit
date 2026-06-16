@@ -45,6 +45,7 @@ import stage1c_fhir_uscore_validator       as _1c
 from findings import derive_findings
 from report   import render_html
 from shared.engagement import load_engagement
+from stage2.anonymize_extract import run as run_stage2
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +98,8 @@ def run(
     validator_jar: str    = "tools/validator_cli.jar",
     java_bin: str         = "java",
     tx_mode: str          = "local",
+    redact: bool          = False,
+    redact_output_dir: str = "data/redacted",
 ) -> dict:
 
     out = Path(output_dir)
@@ -218,6 +221,26 @@ def run(
             reports["stage1c_i"]  = {"status": "ERROR", "error": str(exc)}
             reports["stage1c_ii"] = None
             print(f"  Stage 1c error: {exc}")
+
+    # -----------------------------------------------------------------------
+    # Stage 2 — PHI redaction (Path B only, opt-in via --redact)
+    # -----------------------------------------------------------------------
+    if redact:
+        if not b_ok:
+            _section("Stage 2 — SKIPPED (Stage 1b has failures; fix and re-run before redacting)")
+        else:
+            _section("Stage 2 — PHI redaction / anonymization")
+            try:
+                run_stage2(
+                    ndjson_dir=ndjson_dir,
+                    output_dir=redact_output_dir,
+                    engagement=engagement_name,
+                    output_path=str(out / f"stage2-{engagement_name}.json"),
+                )
+            except SystemExit:
+                print("  Stage 2 exited — check --ndjson-dir for .ndjson files")
+            except Exception as exc:
+                print(f"  Stage 2 error: {exc}")
 
     # -----------------------------------------------------------------------
     # DQAR findings
@@ -387,15 +410,28 @@ Examples:
              "connection, skips terminology binding checks. 'live': connects to "
              "tx.fhir.org for full terminology binding validation, ~20%% slower.",
     )
+    parser.add_argument(
+        "--redact", action="store_true",
+        help="Path B only. After Stage 1 completes, also run Stage 2 PHI "
+             "redaction against --ndjson-dir, producing an anonymized "
+             "extract ready for Sonian delivery. Client-initiated, never "
+             "runs by default.",
+    )
+    parser.add_argument(
+        "--redact-output-dir", default="data/redacted",
+        help="Where the Stage 2 anonymized .ndjson.gz extract is written (default: data/redacted)",
+    )
     args = parser.parse_args()
 
     run(
-        engagement_path = args.engagement,
-        ndjson_dir      = args.ndjson_dir,
-        output_dir      = args.output_dir,
-        skip_1a         = args.skip_1a,
-        backend         = args.backend,
-        validator_jar   = args.validator_jar,
-        java_bin        = args.java_bin,
-        tx_mode         = args.tx_mode,
+        engagement_path   = args.engagement,
+        ndjson_dir        = args.ndjson_dir,
+        output_dir        = args.output_dir,
+        skip_1a           = args.skip_1a,
+        backend           = args.backend,
+        validator_jar     = args.validator_jar,
+        java_bin          = args.java_bin,
+        tx_mode           = args.tx_mode,
+        redact            = args.redact,
+        redact_output_dir = args.redact_output_dir,
     )

@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
@@ -40,6 +40,7 @@ import stage1b_ndjson_validator            as _1b
 import stage1c_fhir_uscore_validator       as _1c
 from findings import derive_findings
 from report   import render_html
+from stage2.anonymize_extract import run as run_stage2
 
 app = FastAPI(title="DQAR UC1 Assessment", docs_url=None, redoc_url=None)
 
@@ -73,6 +74,7 @@ def _resolve_java() -> str:
 
 
 JAVA_BIN = _resolve_java()
+TX_MODE  = os.environ.get("TX_MODE", "local")
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +98,7 @@ async def assess(
     eng_name:      str              = Form("client"),
     client_id:     str              = Form(""),
     client_secret: str              = Form(""),
+    redact:        bool             = Form(False),
 ):
     fhir_url = fhir_url.strip()
     if not files and not fhir_url:
@@ -159,6 +162,7 @@ async def assess(
     _RUNS[run_id]["eng_name"]     = eng_name.strip() or "client"
     _RUNS[run_id]["client_id"]    = client_id.strip()
     _RUNS[run_id]["client_secret"]= client_secret.strip()
+    _RUNS[run_id]["redact"]       = redact
 
     return {"run_id": run_id}
 
@@ -195,7 +199,9 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
     eng_name      = run["eng_name"]
     client_id     = run["client_id"]
     client_secret = run["client_secret"]
+    redact        = run.get("redact", False)
     reports: dict = {}
+    b_ok = False
 
     out_dir = tmp / "reports"
     out_dir.mkdir()
@@ -340,6 +346,7 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
                             backend       = "hapi-cli",
                             validator_jar = VALIDATOR_JAR,
                             java_bin      = JAVA_BIN,
+                            tx_mode       = TX_MODE,
                         ))
                         reports["stage1c_i"]  = r1c[0] if len(r1c) > 0 else None
                         reports["stage1c_ii"] = r1c[1] if len(r1c) > 1 else None
@@ -381,6 +388,42 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
         _RUNS[run_id]["html"]   = html
         _RUNS[run_id]["status"] = "done"
 
+        # ------------------------------------------------------------------
+        # Stage 2 — PHI redaction (Path B only, opt-in via the upload form)
+        # ------------------------------------------------------------------
+        redacted_ready = False
+        if redact and has_ndjson and b_ok:
+            yield _sse("progress", json.dumps({"stage": "stage2", "status": "running",
+                "msg": "Stage 2 — redacting PHI for Sonian delivery…"}))
+            try:
+                redacted_dir = Path(tempfile.mkdtemp(prefix=f"dqar-redacted-{run_id}-"))
+                await loop.run_in_executor(None, lambda: run_stage2(
+                    ndjson_dir=ndjson_dir,
+                    output_dir=str(redacted_dir),
+                    engagement=eng_name,
+                    output_path=str(out_dir / f"stage2-{eng_name}.json"),
+                ))
+                bundle_fd, bundle_path = tempfile.mkstemp(
+                    prefix=f"dqar-redacted-{run_id}-", suffix=".tar.gz")
+                os.close(bundle_fd)
+                with tarfile.open(bundle_path, "w:gz") as tf:
+                    for item in redacted_dir.iterdir():
+                        # Never ship dotfiles (e.g. a stray salt file) in the
+                        # deliverable — only the redacted extract + its summary.
+                        if not item.name.startswith("."):
+                            tf.add(item, arcname=item.name)
+                shutil.rmtree(redacted_dir, ignore_errors=True)
+                _RUNS[run_id]["redacted_bundle"] = bundle_path
+                redacted_ready = True
+                yield _sse("progress", json.dumps({"stage": "stage2", "status": "PASS",
+                    "msg": "Stage 2 — anonymized extract ready for download"}))
+            except Exception as exc:
+                yield _sse("progress", json.dumps({"stage": "stage2", "status": "ERROR",
+                    "msg": f"Stage 2 — ERROR: {exc}"}))
+        elif redact:
+            yield _sse("progress", json.dumps({"stage": "stage2", "status": "SKIPPED",
+                "msg": "Stage 2 — skipped (no NDJSON uploaded, or Stage 1b has failures)"}))
+
         f_count = len(findings)
         t_counts = {1: 0, 2: 0, 3: 0}
         for f in findings:
@@ -392,6 +435,7 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
             "tier1":    t_counts[1],
             "tier2":    t_counts[2],
             "tier3":    t_counts[3],
+            "redacted": redacted_ready,
         }))
 
     except Exception as exc:
@@ -416,3 +460,21 @@ async def report(run_id: str):
     if run["status"] != "done" or not run["html"]:
         raise HTTPException(status_code=202, detail="Assessment still running")
     return HTMLResponse(content=run["html"])
+
+
+# ---------------------------------------------------------------------------
+# Serve Stage 2 anonymized extract (Path B only — present only if --redact
+# was requested and the run produced one)
+# ---------------------------------------------------------------------------
+
+@app.get("/redacted/{run_id}")
+async def redacted(run_id: str):
+    run = _RUNS.get(run_id)
+    if not run or not run.get("redacted_bundle"):
+        raise HTTPException(status_code=404, detail="No anonymized extract for this run")
+    eng_name = run.get("eng_name", "client")
+    return FileResponse(
+        run["redacted_bundle"],
+        media_type="application/gzip",
+        filename=f"{eng_name}-redacted.tar.gz",
+    )
