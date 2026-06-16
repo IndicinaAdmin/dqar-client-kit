@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout dqar-client-kit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # dqar-contracts ships as a vendored wheel in vendor/ (15KB) so CI needs
       # no cross-repo auth, no PAT, no BuildKit named contexts. To update the
       # wheel when dqar-contracts bumps: pip wheel ../dqar-contracts --no-deps -w vendor/
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build image
         run: |
@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload release artifact
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dqar-client-kit-image
           path: dist/*
