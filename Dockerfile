@@ -51,6 +51,11 @@ ENV FHIR_VALIDATOR_JAR=/app/tools/validator_cli.jar \
     FHIR_PACKAGE_CACHE_HOME=/app/.fhir-cache \
     TX_MODE=local
 
+# Download the HAPI FHIR Validator CLI jar (gitignored — 177MB, too large to
+# commit). Downloaded once per image build; cached in subsequent layers.
+# Version and SHA256 pinned in tools/download_validator_cli.py.
+RUN python tools/download_validator_cli.py
+
 # Bake the ~940MB FHIR R4 + US Core 6.1.0 + terminology package cache into
 # the image layer — the "FHIR conformance packages" requirement. Every
 # container starts ready; --tx-mode local makes zero outbound calls.
