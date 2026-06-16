@@ -15,7 +15,10 @@
 #   pip wheel ../dqar-contracts --no-deps -w vendor/
 #   git add vendor/dqar_contracts-*.whl
 
-FROM python:3.11-slim
+# Pin to bookworm (Debian 12 LTS) — the current python:3.11-slim resolves to
+# Trixie (Debian 13) which has dropped openjdk-17; bookworm retains it and
+# has a better-reviewed CVE surface as a stable/LTS release.
+FROM python:3.11-slim-bookworm
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openjdk-17-jre-headless \
