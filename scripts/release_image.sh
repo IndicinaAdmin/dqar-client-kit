@@ -10,6 +10,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Docker Desktop on macOS puts the credential helper in the app bundle, not in
+# the shell PATH. Add it if present so `docker build` can pull public images.
+if [ -d "/Applications/Docker.app/Contents/Resources/bin" ]; then
+  export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
+fi
+
 VERSION="${1:-$(grep -m1 '^version' pyproject.toml | sed -E 's/version = "(.*)"/\1/')}"
 if [ -z "$VERSION" ]; then
   echo "Could not determine version. Pass it explicitly: scripts/release_image.sh 0.1.0" >&2
