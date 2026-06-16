@@ -16,9 +16,9 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 
-CONTRACTS_DIR="../dqar-contracts"
-if [ ! -d "$CONTRACTS_DIR" ]; then
-  echo "Expected dqar-contracts checked out at $CONTRACTS_DIR (sibling repo) — not found." >&2
+if [ ! -f vendor/dqar_contracts-*.whl ]; then
+  echo "vendor/dqar_contracts-*.whl not found." >&2
+  echo "Rebuild it from the sibling repo: pip wheel ../dqar-contracts --no-deps -w vendor/" >&2
   exit 1
 fi
 
@@ -29,10 +29,7 @@ TARBALL="${OUT_DIR}/dqar-client-kit-${VERSION}.tar.gz"
 mkdir -p "$OUT_DIR"
 
 echo "Building ${IMAGE} ..."
-DOCKER_BUILDKIT=1 docker build \
-  --build-context contracts="$CONTRACTS_DIR" \
-  -t "$IMAGE" \
-  .
+docker build -t "$IMAGE" .
 
 echo "Saving + compressing ${TARBALL} ..."
 docker save "$IMAGE" | gzip > "$TARBALL"

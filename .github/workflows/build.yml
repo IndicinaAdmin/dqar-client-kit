@@ -14,14 +14,9 @@ jobs:
       - name: Checkout dqar-client-kit
         uses: actions/checkout@v4
 
-      - name: Checkout dqar-contracts (sibling)
-        uses: actions/checkout@v4
-        with:
-          repository: IndicinaAdmin/dqar-contracts
-          path: dqar-contracts
-          # dqar-contracts is pinned >=1.0.0,<2.0.0 in pyproject.toml; CI
-          # tracks main same as local dev (`pip install -e ../dqar-contracts`).
-          token: ${{ secrets.DQAR_CONTRACTS_PAT }}
+      # dqar-contracts ships as a vendored wheel in vendor/ (15KB) so CI needs
+      # no cross-repo auth, no PAT, no BuildKit named contexts. To update the
+      # wheel when dqar-contracts bumps: pip wheel ../dqar-contracts --no-deps -w vendor/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -29,18 +24,14 @@ jobs:
       - name: Build image
         run: |
           docker buildx build \
-            --build-context contracts=./dqar-contracts \
             -t dqar-client-kit:ci \
             --load \
             .
 
-      # tests/fixtures/fixture-*/ is gitignored (regenerated locally via
-      # tests/generate_fixtures.py from a Synthea-derived seed that isn't
-      # committed) — not available in a fresh checkout. build_compliant_reference.py
-      # is the dependency-free path: no live FHIR server, no Synthea, hand-coded
-      # US Core 6.1.0 + QI Core conformant resources. Use it as the CI regression
-      # input until the fixture seed has a reproducible-in-CI source (tracked as
-      # a follow-up, not blocking this build).
+      # tests/fixtures/fixture-*/ is gitignored (generated locally from a
+      # Synthea-derived seed that isn't committed — needs a live FHIR server).
+      # build_compliant_reference.py is the dependency-free regression path:
+      # no live FHIR server, no Synthea, hand-coded US Core 6.1.0 resources.
       - name: Build deterministic reference extract
         run: python3 tests/build_compliant_reference.py
 

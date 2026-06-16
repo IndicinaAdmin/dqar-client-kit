@@ -6,18 +6,15 @@
 # assessment with zero internet access at runtime (--tx-mode local, the
 # default).
 #
-# dqar-contracts is not published to a registry yet (see CLAUDE.md — "during
-# development: pip install -e ../dqar-contracts"). This build pulls it in
-# via a BuildKit named build context pointing at the sibling repo checkout,
-# the same relationship local development already relies on:
+# dqar-contracts is vendored as a pre-built wheel in vendor/ (15KB,
+# dqar_contracts-1.0.0-py3-none-any.whl) so the build needs no cross-repo
+# auth, no BuildKit named contexts, and no internet access beyond PyPI for
+# fastapi/uvicorn/jinja2. When dqar-contracts bumps a version, rebuild the
+# wheel on the dev machine and commit it:
 #
-#   DOCKER_BUILDKIT=1 docker build \
-#     --build-context contracts=../dqar-contracts \
-#     -t dqar-client-kit:0.1.0 .
-#
-# (scripts/release_image.sh wraps this so nobody has to remember the flag.)
+#   pip wheel ../dqar-contracts --no-deps -w vendor/
+#   git add vendor/dqar_contracts-*.whl
 
-# syntax=docker/dockerfile:1.4
 FROM python:3.11-slim
 
 RUN apt-get update \
@@ -27,11 +24,11 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY pyproject.toml ./
+COPY vendor/ ./vendor/
 
-# Sibling dqar-contracts checkout, supplied via --build-context (see header).
-COPY --from=contracts / /tmp/dqar-contracts
-RUN pip install --no-cache-dir /tmp/dqar-contracts \
-    && rm -rf /tmp/dqar-contracts
+# Install the vendored dqar-contracts wheel, then the kit itself (editable,
+# so web/templates/ and stage1/templates/ resolve from /app at runtime).
+RUN pip install --no-cache-dir vendor/dqar_contracts-*.whl
 
 COPY shared/  ./shared/
 COPY stage1/  ./stage1/

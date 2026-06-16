@@ -6,11 +6,16 @@ contract" — the client's IT team loads an image, they don't pull one.
 
 ## Building a release (Sonian)
 
-Requires `../dqar-contracts` checked out as a sibling repo (same layout
-local development already uses).
-
 ```bash
 scripts/release_image.sh 0.1.0
+```
+
+`dqar-contracts` is vendored as a pre-built wheel in `vendor/` — no
+sibling repo or cross-repo auth needed. If you need to update the wheel:
+
+```bash
+pip wheel ../dqar-contracts --no-deps -w vendor/
+git add vendor/dqar_contracts-*.whl
 ```
 
 This builds the image, saves + gzips it, and writes a checksum:

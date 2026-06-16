@@ -4,18 +4,15 @@
 # `docker compose up` from this directory — no build, no internet access
 # needed at runtime (TX_MODE=local is the default).
 #
-# Sonian dev path: `docker compose build` rebuilds the image locally; the
-# `additional_contexts` entry below supplies the dqar-contracts sibling repo
-# the same way local development does (`pip install -e ../dqar-contracts`).
-# Requires Docker Compose v2.17+ (BuildKit, enabled by default).
+# Sonian dev path: `docker compose build` rebuilds the image locally; no
+# extra flags or sibling-repo access needed — dqar-contracts ships as a
+# vendored wheel in vendor/ (see Dockerfile header for how to update it).
 services:
   app:
     image: dqar-client-kit:${VERSION:-local}
     build:
       context: ..
       dockerfile: Dockerfile
-      additional_contexts:
-        contracts: ../../dqar-contracts
     ports:
       - "${PORT:-8000}:8000"
     environment:

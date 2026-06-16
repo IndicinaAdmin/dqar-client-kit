@@ -36,14 +36,17 @@ is already baked into the image (see "Stage 1c terminology cache" below).
 ## Sonian development (rebuilding the image)
 
 ```bash
-docker compose build   # requires ../../dqar-contracts checked out as a sibling repo
+docker compose build   # no extra flags needed — dqar-contracts is vendored in vendor/
 docker compose up
 ```
 
-`docker-compose.yml`'s `build.additional_contexts` supplies the
-`dqar-contracts` sibling checkout the same way local development does
-(`pip install -e ../dqar-contracts`) — see the Dockerfile header for the
-equivalent raw `docker build` command if you're not using Compose.
+`dqar-contracts` ships as a pre-built wheel in `vendor/` (committed,
+~15KB). When dqar-contracts bumps a version, rebuild it:
+
+```bash
+pip wheel ../dqar-contracts --no-deps -w vendor/
+git add vendor/dqar_contracts-*.whl
+```
 
 ## Stage 2 — PHI redaction (Path B only, client-initiated)
 
