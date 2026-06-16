@@ -31,6 +31,10 @@ tests/reports-1c/
 # root-level artefacts from early runs
 preflight-report.json
 
+# pinned FHIR terminology/IG package cache (~550MB) — provisioned by
+# tools/provision_fhir_cache.sh at Docker build / CI time, never committed
+.fhir-cache/
+
 # large binaries
 synthea.jar
 tools/*.jar

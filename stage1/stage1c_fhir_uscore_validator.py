@@ -21,6 +21,26 @@ Two backend options (--backend):
                        Issues classified into 1c-i / 1c-ii by profile reference in
                        the OperationOutcome diagnostics/expression.
 
+Two terminology modes for the hapi-cli backend (--tx-mode):
+
+  local (default) — `-tx n/a`. No outbound connection to a terminology server.
+                     Validates structure/profile conformance only — terminology
+                     binding errors (wrong code from the wrong ValueSet) are NOT
+                     caught. Fast, zero external exposure. Use for routine/CI runs.
+
+  live             — Connects to https://tx.fhir.org. Adds full terminology
+                     binding validation on top of structure/profile checks.
+                     ~20% slower for this validator version and makes outbound
+                     calls to a third-party server. Use for the deeper/periodic
+                     assessment pass where catching binding errors matters more
+                     than speed or network isolation.
+
+Both modes resolve FHIR R4 + US Core IG content from a pinned, project-local
+package cache (FHIR_PACKAGE_CACHE_HOME, default <repo>/.fhir-cache/) rather than
+the developer's home directory, so behavior is identical across machines/CI.
+Pre-warm it with tools/provision_fhir_cache.sh during the Docker build / CI cache
+step — never commit it (it's ~550MB; see .gitignore).
+
 Outputs (written to --output-dir, default data/):
   stage1c-i-{engagement}.json   — base FHIR R4 results
   stage1c-ii-{engagement}.json  — US Core 6.1.0 results
@@ -68,6 +88,21 @@ def _resolve_java() -> str:
 
 JAVA_BIN = _resolve_java()
 VALIDATOR_JAR = os.environ.get("FHIR_VALIDATOR_JAR", "tools/validator_cli.jar")
+
+# Project-local FHIR package cache (FHIR R4 core + US Core + dependencies, ~550MB).
+# Pinned via -Duser.home so every machine/CI runner resolves the same package
+# versions instead of depending on whatever happens to be in ~/.fhir/packages.
+# Never commit this directory — see .gitignore and tools/provision_fhir_cache.sh.
+FHIR_PACKAGE_CACHE_HOME = os.environ.get(
+    "FHIR_PACKAGE_CACHE_HOME",
+    str(Path(__file__).resolve().parents[1] / ".fhir-cache"),
+)
+
+TX_SERVERS = {
+    "local": "n/a",
+    "live":  "https://tx.fhir.org",
+}
+
 FHIR_VERSION = "4.0.1"
 US_CORE_IG = "hl7.fhir.us.core#6.1.0"
 US_CORE_VERSION = "6.1.0"
@@ -108,7 +143,7 @@ def _count_resources(ndjson_files: list) -> dict:
     """Line count per ndjson file (= resource count)."""
     counts = {}
     for f in ndjson_files:
-        lines = [ln for ln in f.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        lines = [ln for ln in f.read_text(encoding="utf-8", errors="replace").splitlines() if ln.strip()]
         counts[f.stem] = len(lines)
     return counts
 
@@ -185,6 +220,7 @@ def _build_report(
     timestamp: str,
     validator: str,
     validator_version: str = None,
+    tx_mode: str = None,
 ) -> dict:
     errors = sum(1 for i in issues if i["severity"] in ("error", "fatal"))
     warnings = sum(1 for i in issues if i["severity"] == "warning")
@@ -209,6 +245,11 @@ def _build_report(
     if validator_version:
         report["validator_version"] = validator_version
 
+    if tx_mode:
+        report["tx_mode"] = tx_mode
+        if tx_mode == "local":
+            report["terminology_binding_validation"] = "skipped (local tx-mode — no terminology server connection)"
+
     if sub_pass["ig"]:
         report["ig_version"] = sub_pass["ig"]
         report["us_core_version"] = US_CORE_VERSION
@@ -227,11 +268,15 @@ def _run_hapi_cli(
     validator_jar: str,
     ig: str,
     extra_flags: list,
+    tx_mode: str = "local",
 ) -> subprocess.CompletedProcess:
     cmd = [
-        java_bin, "-Xmx4g", "-jar", validator_jar,
+        java_bin,
+        f"-Duser.home={FHIR_PACKAGE_CACHE_HOME}",
+        "-Xmx4g", "-jar", validator_jar,
         "-version", FHIR_VERSION,
         "-output", str(output_json),
+        "-tx", TX_SERVERS[tx_mode],
     ] + extra_flags
     if ig:
         cmd += ["-ig", ig]
@@ -320,6 +365,7 @@ def _run_hapi_backend(
     output_dir: Path,
     validator_jar: str,
     java_bin: str,
+    tx_mode: str = "local",
 ) -> list:
     jar = Path(validator_jar)
     if not jar.exists():
@@ -370,7 +416,7 @@ def _run_hapi_backend(
             hapi_out = tmp / f"{sp['stage']}-output.json"
             proc = _run_hapi_cli(
                 sampled_files, hapi_out, java_bin, str(jar),
-                sp["ig"], sp["extra_flags"],
+                sp["ig"], sp["extra_flags"], tx_mode,
             )
 
             if validator_version is None:
@@ -384,6 +430,7 @@ def _run_hapi_backend(
             report = _build_report(
                 sp, engagement_name, issues, resource_counts,
                 timestamp, validator="hapi-cli", validator_version=validator_version,
+                tx_mode=tx_mode,
             )
 
             if skipped_empty:
@@ -537,6 +584,7 @@ def run(
     backend: str = "hapi-cli",
     validator_jar: str = VALIDATOR_JAR,
     java_bin: str = JAVA_BIN,
+    tx_mode: str = "local",
 ) -> list:
     ndjson_path = Path(ndjson_dir)
     ndjson_files = sorted(ndjson_path.glob("*.ndjson"))
@@ -555,12 +603,16 @@ def run(
     print(f"  Engagement: {engagement_name}")
     print(f"  Backend   : {backend}")
     print(f"  NDJSON dir: {ndjson_path}")
-    print(f"  Resources : {sum(resource_counts.values()):,} across {len(ndjson_files)} files\n")
+    print(f"  Resources : {sum(resource_counts.values()):,} across {len(ndjson_files)} files")
+    if backend == "hapi-cli":
+        print(f"  Tx mode   : {tx_mode}"
+              + ("  (no terminology server connection)" if tx_mode == "local" else "  (connects to tx.fhir.org)"))
+    print()
 
     if backend == "hapi-cli":
         reports = _run_hapi_backend(
             ndjson_files, engagement_name, resource_counts,
-            timestamp, out, validator_jar, java_bin,
+            timestamp, out, validator_jar, java_bin, tx_mode,
         )
     elif backend == "aidbox":
         if not Path(engagement).exists():
@@ -610,6 +662,12 @@ if __name__ == "__main__":
         "--java-bin", default=JAVA_BIN,
         help=f"Java binary — hapi-cli backend only (default: {JAVA_BIN})",
     )
+    parser.add_argument(
+        "--tx-mode", default="local", choices=["local", "live"],
+        help="hapi-cli backend only. 'local' (default): -tx n/a, no outbound "
+             "connection, skips terminology binding checks. 'live': connects to "
+             "tx.fhir.org for full terminology binding validation, ~20% slower.",
+    )
     args = parser.parse_args()
 
     run(
@@ -619,4 +677,5 @@ if __name__ == "__main__":
         backend=args.backend,
         validator_jar=args.validator_jar,
         java_bin=args.java_bin,
+        tx_mode=args.tx_mode,
     )

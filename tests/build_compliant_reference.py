@@ -92,7 +92,7 @@ def patient() -> dict:
                         "display": "Medical Record Number"
                     }]
                 },
-                "system": "http://indicina.com/fhir/reference-mrn",
+                "system": "http://Sonian.io/fhir/reference-mrn",
                 "value": "MRN-REF-001"
             }
         ],
@@ -155,7 +155,7 @@ def organization() -> dict:
             }
         ],
         # US Core: name (required)
-        "name": "Indicina Reference Health Plan",
+        "name": "Sonian Reference Health Plan",
         # US Core: address with state (must-support)
         "address": [
             {

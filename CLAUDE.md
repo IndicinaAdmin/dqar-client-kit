@@ -131,7 +131,7 @@ Rung 4 — Stage 1 as production pre-ingest quality gate. Full PHI in plan-owned
 
 ## Development Principles
 
-1. **PHI never enters Indicina infrastructure** — all client-side stages run on plan infrastructure.
+1. **PHI never enters Sonian infrastructure** — all client-side stages run on plan infrastructure.
 2. **Conformance testing before pseudonymization** — the fixed stage order is not negotiable.
 3. **`shared/engagement.py` is a shim** — do not add new logic there; import from `dqar_contracts.shared` directly.
 4. **The egress package is the only output** — nothing else crosses to `dqar-aidbox`.

@@ -96,6 +96,7 @@ def run(
     backend: str          = "hapi-cli",
     validator_jar: str    = "tools/validator_cli.jar",
     java_bin: str         = "java",
+    tx_mode: str          = "local",
 ) -> dict:
 
     out = Path(output_dir)
@@ -202,6 +203,7 @@ def run(
                 backend       = backend,
                 validator_jar = validator_jar,
                 java_bin      = java_bin,
+                tx_mode       = tx_mode,
             )
             if isinstance(r1c, list):
                 reports["stage1c_i"]  = r1c[0] if len(r1c) > 0 else None
@@ -273,7 +275,7 @@ def run(
 def _banner(name: str, ndjson: str, backend: str, out: Path) -> None:
     print()
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║  Indicina DQAR — Stage 1 Assessment                     ║")
+    print("║  Sonian DQAR — Stage 1 Assessment                        ║")
     print("╚══════════════════════════════════════════════════════════╝")
     print(f"  Engagement : {name}")
     print(f"  NDJSON dir : {ndjson}")
@@ -379,6 +381,12 @@ Examples:
         "--java-bin", default="java",
         help="Java binary (hapi-cli backend only)",
     )
+    parser.add_argument(
+        "--tx-mode", default="local", choices=["local", "live"],
+        help="hapi-cli backend only. 'local' (default): no terminology server "
+             "connection, skips terminology binding checks. 'live': connects to "
+             "tx.fhir.org for full terminology binding validation, ~20%% slower.",
+    )
     args = parser.parse_args()
 
     run(
@@ -389,4 +397,5 @@ Examples:
         backend         = args.backend,
         validator_jar   = args.validator_jar,
         java_bin        = args.java_bin,
+        tx_mode         = args.tx_mode,
     )
