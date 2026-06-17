@@ -54,17 +54,18 @@ jobs:
           docker run --rm dqar-client-kit:ci \
             python -c "import pathlib,sys; p=pathlib.Path('/app/.fhir-cache'); sys.exit(0 if p.is_dir() and any(p.iterdir()) else 1)"
 
-      - name: Build release tarball
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p dist
           docker save dqar-client-kit:ci | gzip > "dist/dqar-client-kit-${VERSION}.tar.gz"
-          shasum -a 256 "dist/dqar-client-kit-${VERSION}.tar.gz" > "dist/dqar-client-kit-${VERSION}.tar.gz.sha256"
-
-      - name: Upload release artifact
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v7
-        with:
-          name: dqar-client-kit-image
-          path: dist/*
+          shasum -a 256 "dist/dqar-client-kit-${VERSION}.tar.gz" \
+            > "dist/dqar-client-kit-${VERSION}.tar.gz.sha256"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "dqar-client-kit ${GITHUB_REF_NAME}" \
+            --notes "Offline Docker image tarball. See RELEASE.md for quick-start instructions." \
+            "dist/dqar-client-kit-${VERSION}.tar.gz" \
+            "dist/dqar-client-kit-${VERSION}.tar.gz.sha256"
