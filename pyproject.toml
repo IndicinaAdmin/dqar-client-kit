@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dqar-client-kit"
-version = "0.1.0"
+version = "0.1.1"
 requires-python = ">=3.9"
 description = "DQAR client-side conformance testing kit and local assessment server"
 dependencies = [
