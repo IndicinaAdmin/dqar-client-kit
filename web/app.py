@@ -83,7 +83,7 @@ TX_MODE  = os.environ.get("TX_MODE", "local")
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return _TEMPLATES.TemplateResponse("upload.html", {"request": request})
+    return _TEMPLATES.TemplateResponse(request=request, name="upload.html")
 
 
 # ---------------------------------------------------------------------------
@@ -129,18 +129,24 @@ async def assess(
                                 flat.write_bytes(extracted.read_bytes())
                                 extracted.unlink()
             elif name.endswith((".tar.gz", ".tgz")):
+                import gzip as _gzip
                 with tarfile.open(dest) as tf:
                     for member in tf.getmembers():
                         basename = Path(member.name).name
-                        # Skip macOS ._* metadata files and non-NDJSON entries
-                        if not member.name.endswith(".ndjson") or basename.startswith("._"):
+                        if basename.startswith("._"):
                             continue
-                        tf.extract(member, ndjson_dir)
-                        extracted = ndjson_dir / member.name
-                        flat = ndjson_dir / basename
-                        if extracted != flat:
-                            flat.write_bytes(extracted.read_bytes())
-                            extracted.unlink()
+                        if member.name.endswith(".ndjson.gz"):
+                            fobj = tf.extractfile(member)
+                            if fobj:
+                                flat = ndjson_dir / basename[:-3]  # strip .gz
+                                flat.write_bytes(_gzip.decompress(fobj.read()))
+                        elif member.name.endswith(".ndjson"):
+                            tf.extract(member, ndjson_dir)
+                            extracted = ndjson_dir / member.name
+                            flat = ndjson_dir / basename
+                            if extracted != flat:
+                                flat.write_bytes(extracted.read_bytes())
+                                extracted.unlink()
             elif name.endswith(".ndjson"):
                 shutil.copy(dest, ndjson_dir / upload.filename)
 
@@ -384,9 +390,8 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
             "stage1c_ii":   reports.get("stage1c_ii"),
             "findings":     findings,
         }
-        html = render_html(combined)
-        _RUNS[run_id]["html"]   = html
-        _RUNS[run_id]["status"] = "done"
+        _RUNS[run_id]["combined"] = combined
+        _RUNS[run_id]["status"]   = "done"
 
         # ------------------------------------------------------------------
         # Stage 2 — PHI redaction (Path B only, opt-in via the upload form)
@@ -402,6 +407,8 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
                     output_dir=str(redacted_dir),
                     engagement=eng_name,
                     output_path=str(out_dir / f"stage2-{eng_name}.json"),
+                    fhir_server_url=fhir_url,
+                    source_system_type=server_type,
                 ))
                 bundle_fd, bundle_path = tempfile.mkstemp(
                     prefix=f"dqar-redacted-{run_id}-", suffix=".tar.gz")
@@ -457,9 +464,10 @@ async def report(run_id: str):
         raise HTTPException(status_code=404, detail="Run not found")
     if run["status"] == "error":
         raise HTTPException(status_code=500, detail=run.get("error", "Unknown error"))
-    if run["status"] != "done" or not run["html"]:
+    if run["status"] != "done" or not run.get("combined"):
         raise HTTPException(status_code=202, detail="Assessment still running")
-    return HTMLResponse(content=run["html"])
+    redacted_url = f"/redacted/{run_id}" if run.get("redacted_bundle") else ""
+    return HTMLResponse(content=render_html(run["combined"], redacted_url=redacted_url))
 
 
 # ---------------------------------------------------------------------------

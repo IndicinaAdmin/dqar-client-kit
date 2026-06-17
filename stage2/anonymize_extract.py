@@ -40,6 +40,45 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "stage1"))
 from stage2.redact import redact, RedactionStats
 import stage1b_ndjson_validator as _1b
 
+# Maps CapabilityStatement software.name substrings (case-insensitive) to
+# canonical source_system_type values used by the dqar-aidbox inference algorithm.
+_SOFTWARE_NAME_MAP = [
+    ("epic",                        "epic"),
+    ("cerner",                      "cerner"),
+    ("oracle health",               "cerner"),
+    ("meditech",                    "meditech"),
+    ("allscripts",                  "allscripts"),
+    ("athena",                      "athenahealth"),
+    ("smile",                       "smile-cdr"),
+    ("azure health data",           "azure-health-data-services"),
+    ("azure api for fhir",          "azure-health-data-services"),
+    ("google cloud healthcare",     "google-cloud-healthcare"),
+    ("aws healthlake",              "aws-healthlake"),
+    ("hapi",                        "hapi"),
+]
+
+
+def _fetch_source_system_type(fhir_server_url: str) -> tuple[str, str]:
+    """Fetch CapabilityStatement and return (source_system_type, software_name).
+
+    Best-effort — returns ("unknown", "") on any failure. Stage 2 is designed
+    to run offline so a failed fetch must never block redaction.
+    """
+    try:
+        import urllib.request
+        url = fhir_server_url.rstrip("/") + "/metadata"
+        req = urllib.request.Request(url, headers={"Accept": "application/fhir+json"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            cs = json.loads(resp.read())
+        software_name = cs.get("software", {}).get("name", "")
+        lower = software_name.lower()
+        for fragment, canonical in _SOFTWARE_NAME_MAP:
+            if fragment in lower:
+                return canonical, software_name
+        return "unknown", software_name
+    except Exception:
+        return "unknown", ""
+
 
 def _load_or_create_salt(output_dir: Path, engagement: str) -> str:
     """Reuse the same salt across repeated runs for this engagement, so
@@ -65,6 +104,8 @@ def run(
     output_path: str = None,
     salt: str = None,
     reverify: bool = True,
+    fhir_server_url: str = "",
+    source_system_type: str = "",
 ) -> dict:
     in_dir = Path(ndjson_dir)
     out_dir = Path(output_dir)
@@ -77,6 +118,15 @@ def run(
 
     if salt is None:
         salt = _load_or_create_salt(out_dir, engagement)
+
+    # Resolve source_system_type from CapabilityStatement if not provided.
+    software_name = ""
+    if fhir_server_url and not source_system_type:
+        source_system_type, software_name = _fetch_source_system_type(fhir_server_url)
+        if software_name:
+            print(f"  CapabilityStatement software.name: {software_name!r} → {source_system_type}")
+    elif not source_system_type:
+        source_system_type = "unknown"
 
     print("Stage 2 — PHI redaction / anonymization")
     print(f"  {len(files)} files in {in_dir} -> {out_dir}\n")
@@ -94,6 +144,12 @@ def run(
                 if not line:
                     continue
                 resource = json.loads(line)
+                # Inject meta.source before redaction so it is present in the
+                # egress package. The dqar-aidbox Priority 2 inference reads
+                # this URI for source-system-id pattern matching.
+                if fhir_server_url:
+                    meta = resource.setdefault("meta", {})
+                    meta["source"] = fhir_server_url
                 redacted, stats = redact(resource, salt=salt)
                 dst.write(json.dumps(redacted) + "\n")
                 totals.merge(stats)
@@ -115,6 +171,26 @@ def run(
             print(f"  WARNING: {failed} file(s) failed structural validation after redaction.")
         else:
             print("  Redacted extract passes Stage 1b structural validation.")
+
+    # Write feed manifest before compression so it lands in the egress tar.gz.
+    # dqar-aidbox Priority 1 inference matches resource._source_file against
+    # feed["files"] to assign source-system-id with asserted confidence.
+    gz_filenames = [f.name + ".gz" for f in files]
+    feed_manifest = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "engagement": engagement,
+        "feeds": [
+            {
+                "fhir_server_url": fhir_server_url,
+                "source_system_type": source_system_type,
+                **({"software_name": software_name} if software_name else {}),
+                "files": gz_filenames,
+            }
+        ],
+    }
+    manifest_path = out_dir / "feed_manifest.json"
+    manifest_path.write_text(json.dumps(feed_manifest, indent=2))
+    print(f"\n  feed_manifest.json written ({source_system_type}, {len(gz_filenames)} files)")
 
     # Compress each file in place and drop the plaintext copy.
     for ndjson_file in files:
@@ -158,6 +234,8 @@ if __name__ == "__main__":
     parser.add_argument("--output", default=None, help="Path for the stage2 summary JSON report")
     parser.add_argument("--salt", default=None, help="Override the auto-generated per-engagement salt")
     parser.add_argument("--no-reverify", action="store_true", help="Skip the post-redaction Stage 1b re-check")
+    parser.add_argument("--fhir-server-url", default="", help="Source FHIR server base URL — written to feed_manifest.json and injected into meta.source")
+    parser.add_argument("--source-system-type", default="", help="Override canonical source system type (e.g. epic, hapi). If omitted and --fhir-server-url is set, derived from CapabilityStatement software.name")
     args = parser.parse_args()
 
     run(
@@ -167,4 +245,6 @@ if __name__ == "__main__":
         output_path=args.output,
         salt=args.salt,
         reverify=not args.no_reverify,
+        fhir_server_url=args.fhir_server_url,
+        source_system_type=args.source_system_type,
     )

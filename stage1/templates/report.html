@@ -40,12 +40,12 @@
       align-items: flex-start;
     }
     .header-left {}
-    .header-wordmark { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6; margin-bottom: 6px; }
-    .header-title { font-size: 22px; font-weight: 700; line-height: 1.2; margin-bottom: 4px; }
-    .header-subtitle { font-size: 13px; opacity: 0.7; }
+    .header-wordmark { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6; margin-bottom: 6px; }
+    .header-title { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; }
+    .header-subtitle { font-size: 15px; opacity: 0.7; }
     .header-meta { text-align: right; }
-    .header-engagement { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-    .header-date { font-size: 12px; opacity: 0.65; }
+    .header-engagement { font-size: 19px; font-weight: 600; margin-bottom: 4px; }
+    .header-date { font-size: 14px; opacity: 0.65; }
     .overall-badge {
       display: inline-block;
       margin-top: 10px;
@@ -344,6 +344,11 @@
         </span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        {% if redacted_url %}
+        <a class="dl-btn" href="{{ redacted_url }}" style="text-decoration:none;">
+          ↓ Download PHI Redacted Extract
+        </a>
+        {% endif %}
         <a class="dl-btn" id="dl-json" href="#" onclick="downloadJSON(event)">
           ↓ Download JSON Report
         </a>
