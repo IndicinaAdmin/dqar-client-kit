@@ -9,7 +9,7 @@ from pathlib import Path
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 
 
-def render_html(report: dict, redacted_url: str = "") -> str:
+def render_html(report: dict, redacted_url: str = "", ndjson_url: str = "") -> str:
     try:
         from jinja2 import Environment, FileSystemLoader, select_autoescape
     except ImportError:
@@ -29,6 +29,7 @@ def render_html(report: dict, redacted_url: str = "") -> str:
     ctx = _build_context(report)
     ctx["report_json"] = _json.dumps(report, indent=2)
     ctx["redacted_url"] = redacted_url
+    ctx["ndjson_url"]   = ndjson_url
     return env.get_template("report.html").render(**ctx)
 
 

@@ -263,30 +263,30 @@
             and output content-type. Leave the URL blank to skip Stage 1a and validate
             uploaded files only.
             <br><br>
-            <strong>Public servers (e.g. hapi.fhir.org):</strong> no credentials needed — leave username and password blank.
-            <strong>Aidbox:</strong> choose "Aidbox (OAuth2)" and provide your client ID and secret.
-            <strong>HAPI with basic auth:</strong> choose "HAPI / other" and provide username and password.
+            <strong>No / basic auth</strong> — public servers or username+password (e.g. HAPI). Credential fields are hidden.
+            <strong>OAuth2 / client credentials</strong> — enter Client ID and Secret. For Medplum enter the root URL (e.g. <code>https://api.medplum.com</code>), not the <code>/fhir/R4</code> path.
           </div>
           <div class="field">
             <label for="fhirUrl">FHIR Server Base URL</label>
             <input type="text" id="fhirUrl" name="fhir_url"
                    placeholder="https://hapi.fhir.org/baseR4">
-            <div class="field-hint">The FHIR base endpoint (e.g. https://hapi.fhir.org/baseR4). Leave blank to skip Stage 1a.</div>
+            <div id="fhirUrlHint" class="field-hint">The FHIR base endpoint. Leave blank to skip Stage 1a.</div>
           </div>
           <div class="field">
             <label for="serverType">Server Type</label>
-            <select id="serverType" name="server_type" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:5px;font-size:13px;color:#111827;background:#fff;">
-              <option value="hapi">HAPI / other (no auth or basic auth)</option>
-              <option value="aidbox">Aidbox (OAuth2 client credentials)</option>
+            <select id="serverTypeDisplay" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:5px;font-size:13px;color:#111827;background:#fff;">
+              <option value="basic">No or Basic Auth</option>
+              <option value="oauth2">OAuth2 / Client Credentials</option>
             </select>
+            <input type="hidden" id="serverType" name="server_type" value="hapi">
           </div>
-          <div class="field-row">
+          <div id="credentialFields" class="field-row" style="display:none;">
             <div class="field">
-              <label for="clientId" id="labelClientId">Username / Client ID <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
-              <input type="text" id="clientId" name="client_id" placeholder="username or client_id">
+              <label for="clientId" id="labelClientId">Client ID</label>
+              <input type="text" id="clientId" name="client_id" placeholder="client_id">
             </div>
             <div class="field">
-              <label for="clientSecret" id="labelClientSecret">Password / Client Secret <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+              <label for="clientSecret" id="labelClientSecret">Client Secret</label>
               <input type="password" id="clientSecret" name="client_secret" placeholder="••••••••">
             </div>
           </div>
@@ -413,15 +413,53 @@
   // -----------------------------------------------------------------------
   // Server type selector — update credential labels
   // -----------------------------------------------------------------------
-  document.getElementById('serverType').addEventListener('change', function() {
-    const isAidbox = this.value === 'aidbox';
-    document.getElementById('labelClientId').innerHTML =
-      isAidbox ? 'Client ID' : 'Username <span style="font-weight:400;color:#9ca3af">(optional)</span>';
-    document.getElementById('labelClientSecret').innerHTML =
-      isAidbox ? 'Client Secret' : 'Password <span style="font-weight:400;color:#9ca3af">(optional)</span>';
-    document.getElementById('clientId').placeholder = isAidbox ? 'client_id' : 'username (optional)';
-    document.getElementById('clientSecret').placeholder = '••••••••';
+  const _displaySel  = document.getElementById('serverTypeDisplay');
+  const _hiddenType  = document.getElementById('serverType');
+
+  // Resolve the specific internal server type from URL + auth selection.
+  // Both Medplum and Aidbox use OAuth2 but differ in FHIR path and token endpoint.
+  function _resolveInternalType(displayVal, url) {
+    if (displayVal === 'basic') return 'hapi';
+    const u = (url || '').toLowerCase();
+    if (u.includes('medplum')) return 'medplum';
+    if (u.includes('aidbox') || u.includes('edge.health')) return 'aidbox';
+    return 'medplum'; // default OAuth2 server type
+  }
+
+  function applyServerType() {
+    const displayVal = _displaySel.value;
+    const url        = document.getElementById('fhirUrl').value;
+    const isOAuth    = displayVal === 'oauth2';
+    const credFields = document.getElementById('credentialFields');
+    const urlHint    = document.getElementById('fhirUrlHint');
+    const urlInput   = document.getElementById('fhirUrl');
+
+    _hiddenType.value = _resolveInternalType(displayVal, url);
+    credFields.style.display = isOAuth ? '' : 'none';
+
+    if (isOAuth) {
+      urlHint.textContent = 'Root server URL (FHIR path added automatically). Leave blank to skip Stage 1a.';
+      urlInput.placeholder = 'https://api.medplum.com';
+    } else {
+      urlHint.textContent = 'The FHIR base endpoint (e.g. https://hapi.fhir.org/baseR4). Leave blank to skip Stage 1a.';
+      urlInput.placeholder = 'https://hapi.fhir.org/baseR4';
+    }
+  }
+
+  _displaySel.addEventListener('change', applyServerType);
+
+  // Auto-detect OAuth2 vs basic from URL, and switch the display dropdown
+  document.getElementById('fhirUrl').addEventListener('input', function() {
+    const url = this.value.toLowerCase();
+    const looksOAuth = url.includes('medplum') || url.includes('aidbox') || url.includes('edge.health');
+    if (looksOAuth && _displaySel.value !== 'oauth2') {
+      _displaySel.value = 'oauth2';
+    }
+    applyServerType();
   });
+
+  // Apply on page load
+  applyServerType();
 
   // -----------------------------------------------------------------------
   // File selection

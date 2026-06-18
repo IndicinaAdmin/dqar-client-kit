@@ -344,6 +344,11 @@
         </span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        {% if ndjson_url %}
+        <a class="dl-btn" href="{{ ndjson_url }}" style="text-decoration:none;">
+          ↓ Download NDJSON Extract
+        </a>
+        {% endif %}
         {% if redacted_url %}
         <a class="dl-btn" href="{{ redacted_url }}" style="text-decoration:none;">
           ↓ Download PHI Redacted Extract

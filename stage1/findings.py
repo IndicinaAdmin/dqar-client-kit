@@ -67,7 +67,10 @@ def _from_stage1a(r: dict) -> list:
     findings = []
     checks = {c["check"]: c for c in r.get("checks", [])}
 
-    if not checks.get("capability_declares_export", {}).get("passed"):
+    cap_declared = checks.get("capability_declares_export", {}).get("passed", False)
+    kick_off_ok  = checks.get("kick_off_accepted",        {}).get("passed", False)
+
+    if not cap_declared:
         findings.append(_finding(
             tier=3,
             title="Bulk FHIR export not declared in CapabilityStatement",
@@ -80,7 +83,10 @@ def _from_stage1a(r: dict) -> list:
             ),
             source="Stage 1a — Check 1: capability_declares_export",
         ))
-        return findings  # downstream checks are meaningless without export capability
+        # Only bail out if the export endpoint is also non-functional;
+        # if kick_off passed the server works — continue to surface further findings.
+        if not kick_off_ok:
+            return findings
 
     if not checks.get("kick_off_accepted", {}).get("passed"):
         findings.append(_finding(

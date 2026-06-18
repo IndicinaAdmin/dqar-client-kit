@@ -55,6 +55,7 @@ _SOFTWARE_NAME_MAP = [
     ("google cloud healthcare",     "google-cloud-healthcare"),
     ("aws healthlake",              "aws-healthlake"),
     ("hapi",                        "hapi"),
+    ("medplum",                     "medplum"),
 ]
 
 

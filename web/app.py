@@ -164,7 +164,7 @@ async def assess(
     _RUNS[run_id]["tmp"]           = str(tmp)
     _RUNS[run_id]["ndjson_dir"]   = str(ndjson_dir)
     _RUNS[run_id]["fhir_url"]     = fhir_url.strip()
-    _RUNS[run_id]["server_type"]  = server_type.strip() if server_type.strip() in ("aidbox", "hapi") else "hapi"
+    _RUNS[run_id]["server_type"]  = server_type.strip() if server_type.strip() in ("aidbox", "hapi", "medplum") else "hapi"
     _RUNS[run_id]["eng_name"]     = eng_name.strip() or "client"
     _RUNS[run_id]["client_id"]    = client_id.strip()
     _RUNS[run_id]["client_secret"]= client_secret.strip()
@@ -223,11 +223,23 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
             # Map form credentials to the correct engagement fields per server type.
             # Aidbox uses OAuth2 client_credentials (client_id / client_secret).
             # HAPI and others use HTTP Basic auth (basic_user / basic_password).
-            if server_type == "aidbox":
+            if server_type in ("aidbox", "medplum"):
+                # Normalize: strip any FHIR sub-path the user may have included.
+                # EngagementConfig computes fhir_base from base_url, so the root
+                # URL is required (e.g. https://api.medplum.com not .../fhir/R4).
+                _base = fhir_url.rstrip("/")
+                if server_type == "medplum":
+                    for _suffix in ("/fhir/R4", "/fhir/r4"):
+                        if _base.endswith(_suffix):
+                            _base = _base[: -len(_suffix)]
+                elif server_type == "aidbox":
+                    for _suffix in ("/fhir",):
+                        if _base.endswith(_suffix):
+                            _base = _base[: -len(_suffix)]
                 eng_config = {
                     "name":          eng_name,
-                    "server_type":   "aidbox",
-                    "base_url":      fhir_url,
+                    "server_type":   server_type,
+                    "base_url":      _base,
                     "client_id":     client_id or None,
                     "client_secret": client_secret or None,
                 }
@@ -241,14 +253,29 @@ async def _run_pipeline(run_id: str) -> AsyncGenerator[str, None]:
                 }
             eng_path = tmp / "engagement.json"
             eng_path.write_text(json.dumps(eng_config))
+            export_ndjson_dir = str(tmp / "export_ndjson")
             try:
                 r1a = await loop.run_in_executor(None, lambda: _1a.run(
                     engagement_path=str(eng_path),
                     output_path=str(out_dir / f"stage1a-{eng_name}.json"),
+                    download_dir=export_ndjson_dir,
                 ))
                 reports["stage1a"] = r1a
                 status = r1a.get("status", "UNKNOWN") if r1a else "UNKNOWN"
-                yield _sse("progress", json.dumps({"stage": "1a", "msg": f"Stage 1a — {status}", "status": status}))
+                downloaded = r1a.get("downloaded_files", []) if r1a else []
+                msg = f"Stage 1a — {status}"
+                if downloaded:
+                    msg += f" · {len(downloaded)} NDJSON file(s) extracted"
+                yield _sse("progress", json.dumps({"stage": "1a", "msg": msg, "status": status}))
+                # If Stage 1a downloaded NDJSON and no files were uploaded, use the export
+                if downloaded and not list(Path(ndjson_dir).glob("*.ndjson")):
+                    import shutil as _shutil
+                    for f in downloaded:
+                        _shutil.copy(f, ndjson_dir)
+                    yield _sse("progress", json.dumps({
+                        "stage": "1a", "status": status,
+                        "msg": f"↳ {len(downloaded)} exported file(s) queued for Stage 1b/1c validation",
+                    }))
             except Exception as exc:
                 reports["stage1a"] = {"status": "ERROR", "error": str(exc)}
                 yield _sse("progress", json.dumps({"stage": "1a", "msg": f"Stage 1a — ERROR: {exc}", "status": "ERROR"}))
@@ -467,13 +494,41 @@ async def report(run_id: str):
     if run["status"] != "done" or not run.get("combined"):
         raise HTTPException(status_code=202, detail="Assessment still running")
     redacted_url = f"/redacted/{run_id}" if run.get("redacted_bundle") else ""
-    return HTMLResponse(content=render_html(run["combined"], redacted_url=redacted_url))
+    ndjson_dir   = Path(run.get("ndjson_dir", ""))
+    ndjson_url   = f"/ndjson/{run_id}" if ndjson_dir.exists() and any(ndjson_dir.glob("*.ndjson")) else ""
+    return HTMLResponse(content=render_html(run["combined"], redacted_url=redacted_url, ndjson_url=ndjson_url))
 
 
 # ---------------------------------------------------------------------------
 # Serve Stage 2 anonymized extract (Path B only — present only if --redact
 # was requested and the run produced one)
 # ---------------------------------------------------------------------------
+
+@app.get("/ndjson/{run_id}")
+async def download_ndjson(run_id: str):
+    """Return a zip of straight .ndjson files (no gzip inside) for the run's extract."""
+    run = _RUNS.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    ndjson_dir = Path(run.get("ndjson_dir", ""))
+    files = sorted(ndjson_dir.glob("*.ndjson")) if ndjson_dir.exists() else []
+    if not files:
+        raise HTTPException(status_code=404, detail="No NDJSON files available for this run")
+
+    import io
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as zf:
+        for f in files:
+            zf.write(f, arcname=f.name)
+    buf.seek(0)
+
+    eng_name = run.get("eng_name", "extract")
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{eng_name}-ndjson.zip"'},
+    )
+
 
 @app.get("/redacted/{run_id}")
 async def redacted(run_id: str):
