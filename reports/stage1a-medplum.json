@@ -1,0 +1,46 @@
+{
+  "report_type": "bulk-fhir-conformance",
+  "stage": "1a",
+  "generated_at": "2026-06-18T13:16:45.291459+00:00",
+  "engagement": "medplum-synthetic",
+  "server_type": "medplum",
+  "fhir_server": "https://api.medplum.com",
+  "status": "PASS",
+  "checks": [
+    {
+      "check": "capability_declares_export",
+      "passed": true,
+      "detail": "$export declared via instantiates: http://hl7.org/fhir/uv/bulkdata/CapabilityStatement/bulk-data"
+    },
+    {
+      "check": "kick_off_accepted",
+      "passed": true,
+      "detail": "HTTP 202"
+    },
+    {
+      "check": "content_location_header",
+      "passed": true,
+      "detail": "https://api.medplum.com/fhir/R4/bulkdata/export/0497355a-954f-43f2-987c-fbbc479509d8"
+    },
+    {
+      "check": "polling_completes",
+      "passed": true,
+      "detail": "final status HTTP 200"
+    },
+    {
+      "check": "manifest_valid",
+      "passed": true,
+      "detail": "output=present, requiresAccessToken=present"
+    },
+    {
+      "check": "output_content_type",
+      "passed": true,
+      "detail": "Condition: application/fhir+ndjson; Encounter: application/fhir+ndjson; Observation: application/fhir+ndjson"
+    }
+  ],
+  "summary": {
+    "total_checks": 6,
+    "passed": 6,
+    "failed": 0
+  }
+}
