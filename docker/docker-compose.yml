@@ -1,15 +1,15 @@
-# DQAR client kit — Rung 1/2 standalone stack.
+# CDAR client kit — Rung 1/2 standalone stack.
 #
-# Client delivery path: `docker load < dqar-client-kit-X.Y.Z.tar.gz` then
+# Client delivery path: `docker load < cdar-client-kit-X.Y.Z.tar.gz` then
 # `docker compose up` from this directory — no build, no internet access
 # needed at runtime (TX_MODE=local is the default).
 #
 # Sonian dev path: `docker compose build` rebuilds the image locally; no
-# extra flags or sibling-repo access needed — dqar-contracts ships as a
+# extra flags or sibling-repo access needed — cdar-contracts ships as a
 # vendored wheel in vendor/ (see Dockerfile header for how to update it).
 services:
   app:
-    image: dqar-client-kit:${VERSION:-local}
+    image: cdar-client-kit:${VERSION:-local}
     build:
       context: ..
       dockerfile: Dockerfile

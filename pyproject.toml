@@ -3,12 +3,12 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dqar-client-kit"
+name = "cdar-client-kit"
 version = "0.1.1"
 requires-python = ">=3.9"
-description = "DQAR client-side conformance testing kit and local assessment server"
+description = "CDAR client-side conformance testing kit and local assessment server"
 dependencies = [
-    "dqar-contracts>=1.0.0,<2.0.0",
+    "cdar-contracts>=2.0.0,<3.0.0",
     "requests",
 ]
 

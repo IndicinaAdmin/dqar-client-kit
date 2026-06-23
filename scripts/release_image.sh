@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the dqar-client-kit image and package it as an offline tarball for
+# Build the cdar-client-kit image and package it as an offline tarball for
 # client delivery — no registry, no client-side credentials (see RELEASE.md).
 #
 # Usage:
@@ -22,15 +22,15 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 
-if [ ! -f vendor/dqar_contracts-*.whl ]; then
-  echo "vendor/dqar_contracts-*.whl not found." >&2
-  echo "Rebuild it from the sibling repo: pip wheel ../dqar-contracts --no-deps -w vendor/" >&2
+if [ ! -f vendor/cdar_contracts-*.whl ]; then
+  echo "vendor/cdar_contracts-*.whl not found." >&2
+  echo "Rebuild it from the sibling repo: pip wheel ../cdar-contracts --no-deps -w vendor/" >&2
   exit 1
 fi
 
-IMAGE="dqar-client-kit:${VERSION}"
+IMAGE="cdar-client-kit:${VERSION}"
 OUT_DIR="dist"
-TARBALL="${OUT_DIR}/dqar-client-kit-${VERSION}.tar.gz"
+TARBALL="${OUT_DIR}/cdar-client-kit-${VERSION}.tar.gz"
 
 mkdir -p "$OUT_DIR"
 

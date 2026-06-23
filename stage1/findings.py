@@ -1,5 +1,5 @@
 """
-Maps Stage 1 check results to three-tier DQAR findings.
+Maps Stage 1 check results to three-tier CDAR findings.
 
 Tier 1 — Governance Gap    : organizational failure that will recur next measurement period
 Tier 2 — Measure Data Gap  : technical data quality failure affecting measure rates now
@@ -439,7 +439,7 @@ def _from_stage1c(r_i: dict, r_ii: dict) -> list:
 
 def derive_findings(reports: dict) -> list:
     """
-    Derives DQAR three-tier findings from Stage 1 check results.
+    Derives CDAR three-tier findings from Stage 1 check results.
     Returns list of finding dicts, ordered tier 1 → 2 → 3.
     """
     all_findings = (

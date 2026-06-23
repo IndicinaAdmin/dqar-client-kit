@@ -282,7 +282,7 @@ def redact(payload: Any, salt: str | None = None) -> tuple[Any, RedactionStats]:
     Returns (redacted_payload, stats). Never mutates the input.
     """
     if salt is None:
-        salt = os.environ.get("DQAR_REDACT_SALT", "")
+        salt = os.environ.get("CDAR_REDACT_SALT", "")
     stats = RedactionStats()
     redacted = _walk(payload, stats, salt)
     return redacted, stats

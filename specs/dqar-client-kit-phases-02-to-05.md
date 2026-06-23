@@ -264,7 +264,7 @@ from pydantic import BaseModel
 from typing import Dict, List
 
 class UCTableProperty(BaseModel):
-    """Single UC table with its DQAR properties."""
+    """Single UC table with its CDAR properties."""
     catalog: str
     schema: str
     table: str
@@ -642,9 +642,9 @@ def run(ndjson_dir, manifest_file, output_dir, profile, vsd_year, verbose):
     # Phase 5: Aggregation & reporting
     logger.info("\nPhase 5/5: Aggregating findings and generating reports...")
     
-    from client_kit.output.dqar_findings import DQARFindingsAggregator
+    from client_kit.output.dqar_findings import CDARFindingsAggregator
     
-    findings_aggregator = DQARFindingsAggregator(
+    findings_aggregator = CDARFindingsAggregator(
         manifest_result=str(output_path / 'manifest-validation-report.json'),
         conformance_result=str(conformance_file),
         uc_properties=str(output_path / 'uc_table_properties.json'),
@@ -653,7 +653,7 @@ def run(ndjson_dir, manifest_file, output_dir, profile, vsd_year, verbose):
     
     dqar_findings = findings_aggregator.aggregate()
     
-    with open(output_path / 'DQAR_FINDINGS.json', 'w') as f:
+    with open(output_path / 'CDAR_FINDINGS.json', 'w') as f:
         json.dump(dqar_findings, f, indent=2)
     
     logger.info("✅ Phase 5 complete")
@@ -667,14 +667,14 @@ def run(ndjson_dir, manifest_file, output_dir, profile, vsd_year, verbose):
     logger.info("  - conformance_report.json")
     logger.info("  - uc_table_properties.json")
     logger.info("  - uc_table_properties.sql")
-    logger.info("  - DQAR_FINDINGS.json")
+    logger.info("  - CDAR_FINDINGS.json")
     logger.info("  - EXECUTIVE_SUMMARY.html")
     logger.info("  - LOAD_INSTRUCTIONS.md")
     
     return 0
 ```
 
-## 5.2 DQAR Findings Aggregator
+## 5.2 CDAR Findings Aggregator
 
 **File:** `client_kit/output/dqar_findings.py`
 
@@ -683,7 +683,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-class DQARFindingsAggregator:
+class CDARFindingsAggregator:
     """Aggregate findings from all phases into Tier 1, 2, 3."""
     
     def __init__(self, manifest_result: str, conformance_result: str, 
@@ -789,7 +789,7 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dqar-client-kit"
+name = "cdar-client-kit"
 version = "2.0.0"
 description = "Data quality audit readiness validation for healthcare payers"
 authors = [{name = "Sonian/Indicina", email = "dev@indicina.io"}]

@@ -1,10 +1,10 @@
 # dbt Integration & Lineage Detection
 
-Reference for dqar-client-kit's interaction with dbt artifacts and lineage detection.
+Reference for cdar-client-kit's interaction with dbt artifacts and lineage detection.
 
 ## Overview
 
-dqar-client-kit Phase 4 integrates with dbt to:
+cdar-client-kit Phase 4 integrates with dbt to:
 
 1. **Parse manifest.json** — extract table/model lineage
 2. **Detect pre-FHIR transformations** — identify where source → FHIR flattening happens
@@ -29,7 +29,7 @@ dbt parse
 
 ### Parsing Strategy
 
-dqar-client-kit reads `manifest.json` and extracts:
+cdar-client-kit reads `manifest.json` and extracts:
 
 1. **Models** — table/view definitions
 2. **Sources** — upstream data sources (S3, Aidbox, databases)
@@ -39,7 +39,7 @@ dqar-client-kit reads `manifest.json` and extracts:
 
 ### dbt Meta Tags for Lineage
 
-Add metadata to your dbt model YAML to help dqar-client-kit understand lineage:
+Add metadata to your dbt model YAML to help cdar-client-kit understand lineage:
 
 ```yaml
 # models/staging/stg_observations.yml
@@ -62,7 +62,7 @@ models:
 
 ### Parsing Output
 
-dqar-client-kit generates a lineage map:
+cdar-client-kit generates a lineage map:
 
 ```json
 {
@@ -138,7 +138,7 @@ Rung impact: Cannot demonstrate Tier B compliance
 **Pass criteria:**
 - dbt-openlineage plugin installed
 - `dbt run` emits RunEvents to OpenMetadata
-- RunEvent includes `DQARIngestFacet` with field mappings
+- RunEvent includes `CDARIngestFacet` with field mappings
 - Field mappings trace HL7v2 OBX segment → FHIR Observation.value
 
 **Tier 3 finding if failed:** "Pre-FHIR Lineage Not Instrumented — dbt runs do not emit OpenLineage events"
@@ -195,7 +195,7 @@ on-run-end:
   - "{{ openlineage_event() }}"
 ```
 
-### DQARIngestFacet Structure
+### CDARIngestFacet Structure
 
 Custom facet emitted with dbt RunEvents:
 
@@ -224,7 +224,7 @@ Custom facet emitted with dbt RunEvents:
   ],
   "facets": {
     "dqarIngestFacet": {
-      "_producer": "dqar-client-kit/1.0.0",
+      "_producer": "cdar-client-kit/1.0.0",
       "sourceType": "clinical_lab",
       "sourceSystemId": "lab-vendor-x-prod",
       "sourceFeedId": "lab-vendor-x-daily",
@@ -262,7 +262,7 @@ Custom facet emitted with dbt RunEvents:
 | No transform model | No model bridges staging → FHIR | Create dbt model with transform logic |
 | dbt-openlineage not installed | dbt run doesn't emit events | `pip install dbt-openlineage` + configure |
 | OpenLineage endpoint unreachable | Events fail to emit | Check OpenMetadata URL, auth token |
-| No DQARIngestFacet | Events lack field mappings | Add custom facet to dbt RunEvent emit logic |
+| No CDARIngestFacet | Events lack field mappings | Add custom facet to dbt RunEvent emit logic |
 
 ### Diagnosis Workflow
 
@@ -292,14 +292,14 @@ cat models/staging/sources.yml | grep dqar_
 - [ ] dbt-openlineage installed and configured
 - [ ] OpenMetadata endpoint URL and auth token set
 - [ ] dbt run emits RunEvents to OpenMetadata
-- [ ] RunEvents include DQARIngestFacet with field mappings
+- [ ] RunEvents include CDARIngestFacet with field mappings
 - [ ] Field mappings trace protocol-specific source fields (HL7v2 OBX, 837 segments, NCPDP fields)
 
 ---
 
 ## Phase 4 Output
 
-When Phase 4 completes, dqar-client-kit generates:
+When Phase 4 completes, cdar-client-kit generates:
 
 ```json
 {
@@ -327,7 +327,7 @@ When Phase 4 completes, dqar-client-kit generates:
       "title": "Pre-FHIR Lineage Not Instrumented",
       "description": "dbt transforms are not emitting OpenLineage RunEvents to OpenMetadata",
       "affected_models": ["fct_observations", "fct_conditions"],
-      "remediation": "Install dbt-openlineage, configure OpenMetadata endpoint, emit DQARIngestFacet with field mappings",
+      "remediation": "Install dbt-openlineage, configure OpenMetadata endpoint, emit CDARIngestFacet with field mappings",
       "rung_impact": "Prevents Rung 3 (Level 3 maturity) certification"
     }
   ]
@@ -339,9 +339,9 @@ When Phase 4 completes, dqar-client-kit generates:
 ## Best Practices
 
 1. **Always define dbt sources** — even if you're not using dbt for orchestration
-2. **Tag transform models** — use `meta.dqar_*` to help dqar-client-kit understand your pipeline
+2. **Tag transform models** — use `meta.dqar_*` to help cdar-client-kit understand your pipeline
 3. **Version your mappings** — dbt model versions should correspond to Interbox rule versions
 4. **Emit RunEvents early** — configure OpenLineage before your first dbt run
-5. **Include field mappings** — DQARIngestFacet must trace source protocol fields to FHIR target fields
+5. **Include field mappings** — CDARIngestFacet must trace source protocol fields to FHIR target fields
 6. **Test emission** — verify events appear in OpenMetadata before certification
 

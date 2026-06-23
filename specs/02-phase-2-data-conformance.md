@@ -8,4 +8,4 @@ Key files:
 - client_kit/validators/piqi.py
 - client_kit/output/member_drilldown.py
 
-See complete implementation in: dqar-client-kit-phases-02-to-05.md
+See complete implementation in: cdar-client-kit-phases-02-to-05.md

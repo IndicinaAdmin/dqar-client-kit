@@ -1,6 +1,6 @@
 # Manifest Schema Reference (v1.0)
 
-Complete field reference for `manifest.json` used by dqar-client-kit.
+Complete field reference for `manifest.json` used by cdar-client-kit.
 
 ## Top-Level Object
 

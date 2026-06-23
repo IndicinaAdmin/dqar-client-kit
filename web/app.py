@@ -1,5 +1,5 @@
 """
-DQAR UC1 — Local Assessment Server
+CDAR UC1 — Local Assessment Server
 
 Accepts NDJSON file uploads (individual files or zip/tar.gz),
 optionally runs Stage 1a against a live FHIR server URL,
@@ -42,7 +42,7 @@ from findings import derive_findings
 from report   import render_html
 from stage2.anonymize_extract import run as run_stage2
 
-app = FastAPI(title="DQAR UC1 Assessment", docs_url=None, redoc_url=None)
+app = FastAPI(title="CDAR UC1 Assessment", docs_url=None, redoc_url=None)
 
 _TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 

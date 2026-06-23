@@ -1,5 +1,5 @@
 """
-Renders the DQAR Stage 1 HTML report from a combined assessment report dict.
+Renders the CDAR Stage 1 HTML report from a combined assessment report dict.
 Requires jinja2: pip install -e '.[report]'
 """
 

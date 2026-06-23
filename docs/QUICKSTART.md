@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get up and running with dqar-client-kit in 15 minutes.
+Get up and running with cdar-client-kit in 15 minutes.
 
 ---
 
@@ -12,17 +12,17 @@ Get up and running with dqar-client-kit in 15 minutes.
 
 ---
 
-## 1. Install dqar-client-kit
+## 1. Install cdar-client-kit
 
 ```bash
-pip install dqar-client-kit
+pip install cdar-client-kit
 ```
 
 Or from git:
 
 ```bash
-git clone https://github.com/Indicina/dqar-client-kit.git
-cd dqar-client-kit
+git clone https://github.com/Indicina/cdar-client-kit.git
+cd cdar-client-kit
 pip install -e .
 ```
 

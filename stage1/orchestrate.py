@@ -1,7 +1,7 @@
 """
-DQAR Stage 1 Assessment — single entry point.
+CDAR Stage 1 Assessment — single entry point.
 
-Sequences Stage 1a → 1b → 1c, derives three-tier DQAR findings,
+Sequences Stage 1a → 1b → 1c, derives three-tier CDAR findings,
 and writes a combined JSON report plus a client-facing HTML report.
 
 Usage:
@@ -121,14 +121,14 @@ def run(
     # -----------------------------------------------------------------------
     try:
         _subprocess.run(
-            [sys.executable, "-m", "dqar_contracts.validate", "--list-viewdefs"],
+            [sys.executable, "-m", "cdar_contracts.validate", "--list-viewdefs"],
             check=True, capture_output=True, text=True
         )
     except _subprocess.CalledProcessError as e:
-        print("✗   dqar-contracts ViewDefinition validation failed:")
+        print("✗   cdar-contracts ViewDefinition validation failed:")
         print(e.stdout)
         print(e.stderr)
-        print("    Fix dqar-contracts before running assessment.")
+        print("    Fix cdar-contracts before running assessment.")
         # Non-fatal for client kit (ViewDefs are Aidbox-side) — warn only
 
     _banner(engagement_name, ndjson_dir, backend, out)
@@ -243,7 +243,7 @@ def run(
                 print(f"  Stage 2 error: {exc}")
 
     # -----------------------------------------------------------------------
-    # DQAR findings
+    # CDAR findings
     # -----------------------------------------------------------------------
     findings = derive_findings(reports)
 
@@ -298,7 +298,7 @@ def run(
 def _banner(name: str, ndjson: str, backend: str, out: Path) -> None:
     print()
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║  Sonian DQAR — Stage 1 Assessment                        ║")
+    print("║  Sonian CDAR — Stage 1 Assessment                        ║")
     print("╚══════════════════════════════════════════════════════════╝")
     print(f"  Engagement : {name}")
     print(f"  NDJSON dir : {ndjson}")
@@ -326,7 +326,7 @@ def _print_summary(name: str, reports: dict, findings: list) -> None:
         return f"║{inner:<{W}}║"
 
     print("╔" + "═" * W + "╗")
-    print(_row("", f"DQAR Stage 1 Summary — {name}"))
+    print(_row("", f"CDAR Stage 1 Summary — {name}"))
     print("╠" + "═" * W + "╣")
     print(_row("Stage 1a",    _stage_label(r1a)))
     print(_row("Stage 1b",    _stage_label(r1b)))
@@ -362,7 +362,7 @@ def _print_summary(name: str, reports: dict, findings: list) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="DQAR Stage 1 Assessment — Bulk FHIR API + NDJSON + US Core conformance",
+        description="CDAR Stage 1 Assessment — Bulk FHIR API + NDJSON + US Core conformance",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

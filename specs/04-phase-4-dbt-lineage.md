@@ -7,4 +7,4 @@ Key files:
 - client_kit/validators/lineage_detection.py
 - client_kit/output/dbt_findings.py
 
-See complete implementation in: dqar-client-kit-phases-02-to-05.md
+See complete implementation in: cdar-client-kit-phases-02-to-05.md

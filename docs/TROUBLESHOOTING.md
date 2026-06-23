@@ -14,11 +14,11 @@ Common issues and solutions.
 
 ```bash
 # Install from PyPI
-pip install dqar-client-kit
+pip install cdar-client-kit
 
 # Or from git
-git clone https://github.com/Indicina/dqar-client-kit.git
-cd dqar-client-kit
+git clone https://github.com/Indicina/cdar-client-kit.git
+cd cdar-client-kit
 pip install -e .
 
 # Verify installation
@@ -33,7 +33,7 @@ python -c "import dqar_client_kit; print(dqar_client_kit.__version__)"
 
 ```bash
 # Reinstall with entry point
-pip install --upgrade --force-reinstall dqar-client-kit
+pip install --upgrade --force-reinstall cdar-client-kit
 
 # Or activate the virtual environment and use Python module
 python -m dqar_client_kit.cli --help
@@ -458,7 +458,7 @@ client-kit validate-manifest manifest.json --verbose
 
 ```bash
 client-kit --version
-pip show dqar-client-kit
+pip show cdar-client-kit
 pip list | grep -i dqar
 ```
 

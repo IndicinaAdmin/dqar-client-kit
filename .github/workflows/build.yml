@@ -13,12 +13,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout dqar-client-kit
+      - name: Checkout cdar-client-kit
         uses: actions/checkout@v6
 
-      # dqar-contracts ships as a vendored wheel in vendor/ (15KB) so CI needs
+      # cdar-contracts ships as a vendored wheel in vendor/ (15KB) so CI needs
       # no cross-repo auth, no PAT, no BuildKit named contexts. To update the
-      # wheel when dqar-contracts bumps: pip wheel ../dqar-contracts --no-deps -w vendor/
+      # wheel when cdar-contracts bumps: pip wheel ../cdar-contracts --no-deps -w vendor/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -26,7 +26,7 @@ jobs:
       - name: Build image
         run: |
           docker buildx build \
-            -t dqar-client-kit:ci \
+            -t cdar-client-kit:ci \
             --load \
             .
 
@@ -41,19 +41,19 @@ jobs:
         run: |
           docker run --rm \
             -v "$PWD/data/compliant-reference":/app/data/export:ro \
-            dqar-client-kit:ci \
+            cdar-client-kit:ci \
             python stage1/orchestrate.py --ndjson-dir data/export --skip-1a --output-dir /tmp/out
 
       - name: Stage 2 redaction regression check
         run: |
           docker run --rm \
             -v "$PWD/data/compliant-reference":/app/data/export:ro \
-            dqar-client-kit:ci \
+            cdar-client-kit:ci \
             python stage2/anonymize_extract.py --ndjson-dir data/export --output-dir /tmp/redacted --engagement ci
 
       - name: Verify .fhir-cache was baked into the image (no runtime download)
         run: |
-          docker run --rm dqar-client-kit:ci \
+          docker run --rm cdar-client-kit:ci \
             python -c "import pathlib,sys; p=pathlib.Path('/app/.fhir-cache'); sys.exit(0 if p.is_dir() and any(p.iterdir()) else 1)"
 
       - name: Create GitHub Release
@@ -63,11 +63,11 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p dist
-          docker save dqar-client-kit:ci | gzip > "dist/dqar-client-kit-${VERSION}.tar.gz"
-          shasum -a 256 "dist/dqar-client-kit-${VERSION}.tar.gz" \
-            > "dist/dqar-client-kit-${VERSION}.tar.gz.sha256"
+          docker save cdar-client-kit:ci | gzip > "dist/cdar-client-kit-${VERSION}.tar.gz"
+          shasum -a 256 "dist/cdar-client-kit-${VERSION}.tar.gz" \
+            > "dist/cdar-client-kit-${VERSION}.tar.gz.sha256"
           gh release create "$GITHUB_REF_NAME" \
-            --title "dqar-client-kit ${GITHUB_REF_NAME}" \
+            --title "cdar-client-kit ${GITHUB_REF_NAME}" \
             --notes "Offline Docker image tarball. See RELEASE.md for quick-start instructions." \
-            "dist/dqar-client-kit-${VERSION}.tar.gz" \
-            "dist/dqar-client-kit-${VERSION}.tar.gz.sha256"
+            "dist/cdar-client-kit-${VERSION}.tar.gz" \
+            "dist/cdar-client-kit-${VERSION}.tar.gz.sha256"

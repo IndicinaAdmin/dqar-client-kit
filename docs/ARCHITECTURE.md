@@ -1,12 +1,12 @@
 # System Architecture
 
-High-level design of dqar-client-kit and how it fits into the DQAR platform.
+High-level design of cdar-client-kit and how it fits into the CDAR platform.
 
 ---
 
 ## Purpose
 
-dqar-client-kit is a Python CLI tool that:
+cdar-client-kit is a Python CLI tool that:
 
 1. **Validates manifest.json** — checks that your data source declarations are correct
 2. **Validates FHIR data** — runs five levels of conformance checks against your records
@@ -111,7 +111,7 @@ LineageDetectionValidator
   └─ Check 3: OpenLineage instrumentation
 
 OpenLineageEmissionValidator
-  └─ Verify DQARIngestFacet presence
+  └─ Verify CDARIngestFacet presence
 ```
 
 **Output:**
@@ -130,7 +130,7 @@ validate_all orchestrator
   ├─ Phase 4: Detect lineage gaps
   └─ Phase 5: Aggregate findings
 
-DQARFindingsAggregator
+CDARFindingsAggregator
   ├─ Tier 1: Governance gaps
   ├─ Tier 2: Data quality issues
   └─ Tier 3: Digital readiness gaps
@@ -169,7 +169,7 @@ manifest.json + *.ndjson files
  LineageDetectionValidator
         ↓
    [Phase 5]
- DQARFindingsAggregator
+ CDARFindingsAggregator
  ExecutiveSummaryGenerator
         ↓
  outputs/
@@ -212,7 +212,7 @@ Validates, scores, generates findings
 ## Dependency Tree
 
 ```
-dqar-client-kit
+cdar-client-kit
 ├─ click (CLI)
 ├─ pydantic (validation)
 ├─ ndjson (NDJSON parsing)
@@ -353,7 +353,7 @@ Rung 3 (Level 3):
 
 Rung 4 (Study Type 2):
   → Mappings as code (Interbox with dbt)
-  → Field-level lineage (DQARIngestFacet)
+  → Field-level lineage (CDARIngestFacet)
 
 Rung 5 (Ops):
   → Continuous monitoring

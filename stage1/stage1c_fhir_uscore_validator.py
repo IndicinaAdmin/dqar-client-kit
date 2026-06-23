@@ -4,10 +4,10 @@ Stage 1c — FHIR R4 + US Core conformance testing.
 Two sequential sub-passes:
 
   Sub-pass 1c-i:  Base FHIR R4 (4.0.1) structural conformance (no IG).
-                  Finding owner: ETL / integration team. DQAR Tier 2.
+                  Finding owner: ETL / integration team. CDAR Tier 2.
 
   Sub-pass 1c-ii: US Core 6.1.0 profile conformance.
-                  Finding owner: clinical informatics + integration team. DQAR Tier 2.
+                  Finding owner: clinical informatics + integration team. CDAR Tier 2.
 
 Two backend options (--backend):
 

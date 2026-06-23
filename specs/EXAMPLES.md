@@ -47,7 +47,7 @@ Produces all artifacts in one command:
   ├── conformance_report.json
   ├── uc_table_properties.json
   ├── uc_table_properties.sql
-  ├── DQAR_FINDINGS.json
+  ├── CDAR_FINDINGS.json
   ├── EXECUTIVE_SUMMARY.html
   ├── LOAD_INSTRUCTIONS.md
   └── logs/

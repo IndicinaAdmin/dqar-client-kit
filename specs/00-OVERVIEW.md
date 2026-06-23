@@ -1,4 +1,4 @@
-# dqar-client-kit: Complete Specifications (v2.0)
+# cdar-client-kit: Complete Specifications (v2.0)
 
 **Component:** Data conformance validation CLI for UC1 assessment  
 **Duration:** 10 weeks (5 phases, 2 weeks each)  
@@ -25,7 +25,7 @@ client-kit validate-all
 Output:
 - Conformance report (5 levels + PIQI)
 - UC table properties (JSON + SQL)
-- DQAR findings (Tiers 1, 2, 3)
+- CDAR findings (Tiers 1, 2, 3)
 - Executive summary (HTML)
 ```
 
@@ -45,7 +45,7 @@ Output:
 | 2 | Weeks 3–4 | Data conformance, PIQI metrics | Conformance report, member drill-down |
 | 3 | Weeks 5–6 | UC properties (JSON + SQL) | uc_table_properties.json/sql |
 | 4 | Weeks 7–8 | dbt lineage detection | Tier 3 findings |
-| 5 | Weeks 9–10 | Orchestration, integration tests | DQAR_FINDINGS.json, EXECUTIVE_SUMMARY.html |
+| 5 | Weeks 9–10 | Orchestration, integration tests | CDAR_FINDINGS.json, EXECUTIVE_SUMMARY.html |
 
 ## How to Use This Spec
 
@@ -68,7 +68,7 @@ Output:
 - **03-phase-3-uc-properties.md** → Phase 3 detailed spec
 - **04-phase-4-dbt-lineage.md** → Phase 4 detailed spec
 - **05-phase-5-integration-orchestration.md** → Phase 5 detailed spec
-- **dqar-client-kit-phases-02-to-05.md** → COMPLETE code implementations for all phases
+- **cdar-client-kit-phases-02-to-05.md** → COMPLETE code implementations for all phases
 - **DEPENDENCIES.md** → Package dependencies
 - **ACCEPTANCE_CRITERIA.md** → Validation checklist
 - **EXAMPLES.md** → Usage examples
@@ -77,7 +77,7 @@ Output:
 
 **New to this project?** → Read this 00-OVERVIEW.md, then start with Phase 1
 
-**Ready to implement?** → Open dqar-client-kit-phases-02-to-05.md for all code
+**Ready to implement?** → Open cdar-client-kit-phases-02-to-05.md for all code
 
 **Need examples?** → See EXAMPLES.md
 

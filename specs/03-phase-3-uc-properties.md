@@ -9,4 +9,4 @@ Key files:
 - examples/load_properties_api.py
 - examples/load_properties_terraform.tf
 
-See complete implementation in: dqar-client-kit-phases-02-to-05.md
+See complete implementation in: cdar-client-kit-phases-02-to-05.md

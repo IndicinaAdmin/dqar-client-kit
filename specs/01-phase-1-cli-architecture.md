@@ -22,4 +22,4 @@
 
 See cli.py, manifest.py, and validator implementations in the complete spec file.
 
-For full code, see: dqar-client-kit-phases-02-to-05.md
+For full code, see: cdar-client-kit-phases-02-to-05.md

@@ -1,4 +1,4 @@
-# DQAR Bulk FHIR Extract Specification
+# CDAR Bulk FHIR Extract Specification
 **Digital Quality Audit Readiness — Sonian**
 *Version 2.0 | June 2026 | Confidential — For Client Use Only*
 *mcampbell@indicina.com | Sonian.io*
@@ -7,14 +7,14 @@
 
 ## 1. Purpose and Scope
 
-This document specifies the Bulk FHIR data extract Sonian requires from your organization to conduct a Digital Quality Audit Readiness (DQAR) assessment engagement. It defines which FHIR R4 resource types to export, the population scope and time window, the anonymization protocol required to protect member PHI, and the technical delivery format.
+This document specifies the Bulk FHIR data extract Sonian requires from your organization to conduct a Digital Quality Audit Readiness (CDAR) assessment engagement. It defines which FHIR R4 resource types to export, the population scope and time window, the anonymization protocol required to protect member PHI, and the technical delivery format.
 
 The extract supports semantic integrity assessment across use case domains depending on engagement scope:
 
 | # | Use Case | Assessment Focus |
 |---|---|---|
 | UC1 | Digital Measure Readiness | HEDIS ECDS measure semantic conformance testing — five-level framework against MP2025 specifications |
-| UC2 | Digital Quality Data Operations Monitoring | Continuous DQAR conformance monitoring — drift detection, VSD currency, governance maturity progression |
+| UC2 | Digital Quality Data Operations Monitoring | Continuous CDAR conformance monitoring — drift detection, VSD currency, governance maturity progression |
 | UC3 | P2P Data Exchange Quality | Incoming payer-to-payer data semantic validity, completeness, and provenance assessment (CMS-0057-F) |
 
 Sonian will confirm the specific use cases in scope at engagement kickoff. This document covers the superset — organizations may provide a subset of resources if only specific use cases are in scope.
@@ -77,15 +77,15 @@ Stage 1b  ndjson structural conformance testing     [stage1b_ndjson_validator.py
           one resource per line; UTF-8 encoding; resourceType matches filename stem
           (e.g. Patient.ndjson must contain only Patient resources — mismatch indicates
           a mis-routed or mis-named file). FAIL at 1b blocks Stage 1c.
-          Finding owner: FHIR server / infrastructure / DevOps team. DQAR Tier 3.
+          Finding owner: FHIR server / infrastructure / DevOps team. CDAR Tier 3.
           Output: stage1b-{engagement}.json + PDF render
 
 Stage 1c  FHIR R4 + US Core conformance testing    [stage1c_fhir_uscore_validator.py]
           Two sub-passes using HAPI Validator CLI (default) or Aidbox (Rung 3+ upgrade):
             1c-i  — Base FHIR R4 (4.0.1) structural conformance testing (no IG).
-                    Finding owner: ETL / integration team. DQAR Tier 2.
+                    Finding owner: ETL / integration team. CDAR Tier 2.
             1c-ii — US Core 6.1.0 profile conformance testing.
-                    Finding owner: clinical informatics + integration team. DQAR Tier 2.
+                    Finding owner: clinical informatics + integration team. CDAR Tier 2.
           Output: stage1c-i-{engagement}.json + stage1c-ii-{engagement}.json
 
 → Client receives 3 JSON reports + 3 PDF renders.
@@ -117,10 +117,10 @@ Stage 3   Load to Aidbox sandbox (Path B) or plan-owned Aidbox (Path C)
               → confirms redaction did not corrupt structural integrity
               → creates permanent conformance baseline for this extract
           (b) Termbox $validate-code — US Core required bindings + HEDIS MP2025 VSD
-              (369 value sets). DQAR Tier 1 if governance process absent.
+              (369 value sets). CDAR Tier 1 if governance process absent.
           (c) AuditEvent + seven extensions generated atomically per resource
 
-Stage 4   DQAR SQL on FHIR assessment queries
+Stage 4   CDAR SQL on FHIR assessment queries
           SQL on FHIR v2 ViewDefinitions execute against Aidbox / PostgreSQL.
           Five-level semantic conformance testing + Level 6 governance assessment.
           Measure attribution join queries link denominator flags to AuditEvent metadata.
@@ -136,7 +136,7 @@ Stage 5   Three-tier findings report generation
 
 #### Finding tier and remediation owner — by pipeline stage
 
-| Stage | Finding Type | DQAR Tier | Remediation Owner | Timeline |
+| Stage | Finding Type | CDAR Tier | Remediation Owner | Timeline |
 |---|---|---|---|---|
 | 1a | Bulk FHIR IG non-compliance — CapabilityStatement missing $export, manifest invalid | Tier 3 — Digital readiness gap | FHIR server / infrastructure / DevOps | Days to weeks |
 | 1b | ndjson structural failure — unparseable JSON, missing resourceType, truncated files | Tier 3 — Digital readiness gap | FHIR server / infrastructure / DevOps | Days |
@@ -172,13 +172,13 @@ Both backends produce the same two output files and the same report schema. `"va
 
 ## 3. AuditEvent Extension Metadata — Generated at Stage 3
 
-AuditEvent resources in the DQAR assessment sandbox are generated by the Sonian ingestion pipeline at Stage 3 when each resource is loaded to Aidbox. Each AuditEvent is posted atomically with its associated clinical resource as a FHIR transaction bundle.
+AuditEvent resources in the CDAR assessment sandbox are generated by the Sonian ingestion pipeline at Stage 3 when each resource is loaded to Aidbox. Each AuditEvent is posted atomically with its associated clinical resource as a FHIR transaction bundle.
 
 The pipeline attaches **seven extension fields** to every AuditEvent it generates. Four fields are populated by the source-type inference algorithm (`dqar-05-source-inference-algorithm.md`). One field (`ingest-pipeline-id`) is set by the pipeline orchestrator. One field (`ecds-ssor`) is derived from `source-type` via deterministic SSoR mapping rule. One field (`ol-run-id`) is the OpenLineage run ID that links the AuditEvent to the lineage graph.
 
 ### 3.1 Extension Definitions
 
-| Extension URL | valueType | Example Value | Purpose / DQAR Use |
+| Extension URL | valueType | Example Value | Purpose / CDAR Use |
 |---|---|---|---|
 | `http://Sonian.io/fhir/ext/source-type` (EXT 1) | valueCode | `clinical_ehr` | Expanded 13-value vocabulary. **Tier A** (structurally detectable): `clinical_ehr`, `administrative_claims`, `administrative_encounter`, `pharmacy_pbm`, `clinical_lab`, `payer_exchange`, `clinical_immunization_registry`. **Tier B** (manifest/meta.source only): `clinical_phr`, `pharmacy_specialty`, `clinical_hie`, `clinical_registry`, `case_management`, `disease_management`. Tier B resources defaulting to `unknown` are Tier 1 governance findings. |
 | `http://Sonian.io/fhir/ext/source-system-id` (EXT 2) | valueString | `epic-prod-org-447` | Pseudonymized identifier of the specific source system instance. Consistent across all resources from same source. Enables Study Type 1 and 2 lineage tracing. |
@@ -186,7 +186,7 @@ The pipeline attaches **seven extension fields** to every AuditEvent it generate
 | `http://Sonian.io/fhir/ext/source-inference-confidence` (EXT 4) | valueCode | `asserted` | Confidence tier: `asserted` \| `high` \| `medium` \| `low` \| `unknown`. Confidence distribution across the extract is a direct provenance maturity metric and Tier 1 governance finding driver. |
 | `http://Sonian.io/fhir/ext/ecds-ssor` (EXT 5) | valueCode | `EHR/PHR` | NCQA ECDS Source of Record (SSoR) category. Four-value vocabulary: `EHR/PHR` \| `Administrative` \| `Clinical Registry/HIE` \| `Case/Disease Mgmt`. Derived from source-type via deterministic SSoR mapping rule. `null` when source-type = `unknown` — triggers Tier 1 governance finding. |
 | `http://Sonian.io/fhir/ext/ingest-pipeline-id` (EXT 6) | valueString | `dqar-20251014-001/epic-prod-org447/Condition.ndjson-chunk-003` | Three-level traceability: run / feed / batch. Enables batch-level error isolation without full re-scan. |
-| `http://Sonian.io/fhir/ext/ol-run-id` (EXT 7) | valueString | `550e8400-e29b-41d4-a716-446655440000` | Ingest batch tag (UUID v4) stamped on every AuditEvent written during a run — not a join key into a lineage graph. OpenLineage RunEvents are emitted directly to OpenMetadata (Marquez has been dropped); OpenMetadata builds the lineage graph from each RunEvent's declared inputs/outputs. Required for DQAR provenance maturity Level 3+. |
+| `http://Sonian.io/fhir/ext/ol-run-id` (EXT 7) | valueString | `550e8400-e29b-41d4-a716-446655440000` | Ingest batch tag (UUID v4) stamped on every AuditEvent written during a run — not a join key into a lineage graph. OpenLineage RunEvents are emitted directly to OpenMetadata (Marquez has been dropped); OpenMetadata builds the lineage graph from each RunEvent's declared inputs/outputs. Required for CDAR provenance maturity Level 3+. |
 
 ### 3.2 Source-Type to SSoR Mapping
 
@@ -214,7 +214,7 @@ The pipeline attaches **seven extension fields** to every AuditEvent it generate
   "resourceType": "AuditEvent",
   "recorded": "2025-10-14T09:22:00Z",
   "agent": [{ "requestor": true, "who": { "display": "dqar-ingest-pipeline" } }],
-  "source": { "observer": { "display": "Sonian DQAR Sandbox" } },
+  "source": { "observer": { "display": "Sonian CDAR Sandbox" } },
   "entity": [{ "what": { "reference": "Condition/pat-abc123-cond-001" } }],
   "extension": [
     { "url": "http://Sonian.io/fhir/ext/source-type",
@@ -243,7 +243,7 @@ The pipeline attaches **seven extension fields** to every AuditEvent it generate
 
 ### 4.1 Mandatory Core — All Use Cases
 
-These resource types are required for every DQAR engagement regardless of use case scope.
+These resource types are required for every CDAR engagement regardless of use case scope.
 
 | Resource Type | FHIR R4 Resource | Use Cases | Status | Key Fields / Notes |
 |---|---|---|---|---|
@@ -297,7 +297,7 @@ PHI redaction is required for **Path B only**. Path C (plan-owned Aidbox, post B
 |---|---|---|---|
 | Patient.id | CRITICAL | Replace with pat-{SHA256[:8]} | Consistent pseudonym used as join key across all resource references |
 | Patient.identifier | CRITICAL | Remove all — member ID, MRN, SSN | Identifiers not required for conformance testing or measure calculation |
-| Patient.name | CRITICAL | Remove entirely | Name not used in any DQAR assessment query |
+| Patient.name | CRITICAL | Remove entirely | Name not used in any CDAR assessment query |
 | Patient.birthDate | HIGH | Retain year only — e.g. 1972 | Age required for age-stratified measures |
 | Patient.address | HIGH | Retain zip code only (5-digit) | Geographic stratification may be relevant |
 | Patient.telecom | HIGH | Remove entirely | Phone/email not required |
@@ -348,7 +348,7 @@ Referential integrity must be preserved across all resource references after ano
 
 ### 6.3 Known Gaps — Please Document
 
-If your organization cannot produce certain resource types or must deviate from the anonymization protocol, document those gaps here before delivery. Known gaps are scored differently from undocumented gaps in the DQAR findings report — documentation demonstrates governance awareness.
+If your organization cannot produce certain resource types or must deviate from the anonymization protocol, document those gaps here before delivery. Known gaps are scored differently from undocumented gaps in the CDAR findings report — documentation demonstrates governance awareness.
 
 | Resource / Element | Gap Description | Reason / Context |
 |---|---|---|
@@ -379,7 +379,7 @@ For questions about CARIN Blue Button IG (ExplanationOfBenefit profile): https:/
 
 | Area | v1.0 | v2.0 |
 |---|---|---|
-| Document name | Digital Quality Audit **Framework** (DQAF) | Digital Quality Audit **Readiness** (DQAR) |
+| Document name | Digital Quality Audit **Framework** (DQAF) | Digital Quality Audit **Readiness** (CDAR) |
 | Stage numbering | Stage 1, 2a, 2b-i, 2b-ii, 3, 4, 5, 6 | Stage 1a, 1b, 1c (client); Stage 2–5 (pipeline) |
 | Stage 1a | Not present | New — Bulk FHIR API conformance preflight (`stage1a_bulk_fhir_export_preflight.py`) |
 | Stage 1b | Was Stage 2a | ndjson structural conformance testing |

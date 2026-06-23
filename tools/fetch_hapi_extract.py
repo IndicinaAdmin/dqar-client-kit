@@ -206,7 +206,7 @@ def main():
     base_url = args.server.rstrip("/")
     output_path = Path(args.out)
 
-    print(f"\nDQAR — HAPI FHIR Extract")
+    print(f"\nCDAR — HAPI FHIR Extract")
     print(f"  Server : {base_url}")
     print(f"  Target : {args.count} patients")
     print(f"  Output : {output_path}\n")
@@ -240,7 +240,7 @@ def main():
         create_tarball(ndjson_files, output_path)
 
     print_summary(by_type, len(patients))
-    print(f"\n  Done. Upload {output_path} to the DQAR web UI or pass to orchestrate.py --ndjson-dir\n")
+    print(f"\n  Done. Upload {output_path} to the CDAR web UI or pass to orchestrate.py --ndjson-dir\n")
 
 
 if __name__ == "__main__":

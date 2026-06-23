@@ -1,6 +1,6 @@
-# dqar-client-kit Documentation
+# cdar-client-kit Documentation
 
-Reference documentation for dqar-client-kit (Phase 1–5).
+Reference documentation for cdar-client-kit (Phase 1–5).
 
 ---
 
@@ -9,7 +9,7 @@ Reference documentation for dqar-client-kit (Phase 1–5).
 ### Getting Started
 
 **[QUICKSTART.md](QUICKSTART.md)**
-- Install dqar-client-kit
+- Install cdar-client-kit
 - Validate manifest
 - Validate FHIR data
 - Generate UC properties
@@ -58,7 +58,7 @@ dbt manifest parsing and lineage detection:
 - dbt meta tags for lineage
 - Lineage detection validator (3 checks)
 - dbt-openlineage configuration
-- DQARIngestFacet structure
+- CDARIngestFacet structure
 - Diagnosing lineage gaps
 - Remediation checklist
 
@@ -139,7 +139,7 @@ client-kit validate-all \
 - MANIFEST_SCHEMA.md: v1.0 (matches `schema_version: "1.0"`)
 - CONFORMANCE_LEVELS.md: v1.0 (5-level model)
 - UC_PROPERTIES.md: v1.0 (dqar.* properties)
-- DBT_INTEGRATION.md: v1.0 (dbt-openlineage + DQARIngestFacet)
+- DBT_INTEGRATION.md: v1.0 (dbt-openlineage + CDARIngestFacet)
 - QUICKSTART.md: v1.0
 - TROUBLESHOOTING.md: v1.0
 - ARCHITECTURE.md: v1.0
@@ -148,7 +148,7 @@ client-kit validate-all \
 
 ## Dependencies
 
-All docs assume dqar-client-kit v1.0.0+.
+All docs assume cdar-client-kit v1.0.0+.
 
 Core dependencies:
 - Python 3.9+

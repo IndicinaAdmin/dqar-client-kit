@@ -1,4 +1,4 @@
-# DQAR Client Kit — Docker Stack
+# CDAR Client Kit — Docker Stack
 
 This directory contains the Docker Compose stack for Rung 1/2 client-side
 conformance testing and PHI redaction.
@@ -23,7 +23,7 @@ Sonian ships a pre-built image as an offline tarball (see `../RELEASE.md`).
 No internet access or registry credentials are needed:
 
 ```bash
-docker load < dqar-client-kit-X.Y.Z.tar.gz
+docker load < cdar-client-kit-X.Y.Z.tar.gz
 cp .env.example .env   # set VERSION=X.Y.Z
 docker compose up
 open http://localhost:8000
@@ -36,16 +36,16 @@ is already baked into the image (see "Stage 1c terminology cache" below).
 ## Sonian development (rebuilding the image)
 
 ```bash
-docker compose build   # no extra flags needed — dqar-contracts is vendored in vendor/
+docker compose build   # no extra flags needed — cdar-contracts is vendored in vendor/
 docker compose up
 ```
 
-`dqar-contracts` ships as a pre-built wheel in `vendor/` (committed,
-~15KB). When dqar-contracts bumps a version, rebuild it:
+`cdar-contracts` ships as a pre-built wheel in `vendor/` (committed,
+~15KB). When cdar-contracts bumps a version, rebuild it:
 
 ```bash
-pip wheel ../dqar-contracts --no-deps -w vendor/
-git add vendor/dqar_contracts-*.whl
+pip wheel ../cdar-contracts --no-deps -w vendor/
+git add vendor/cdar_contracts-*.whl
 ```
 
 ## Stage 2 — PHI redaction (Path B only, client-initiated)
